@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { User, Flag, Clock, Layout, AlignLeft } from 'lucide-react'
+import { User, Flag, Clock, Layout, CheckSquare } from 'lucide-react'
 import Modal from './Modal'
 import RichTextEditor from './RichTextEditor'
-import { useAuth } from '../contexts/AuthContext'
+import TaskComments from './TaskComments'
+import SubtaskTimer from './SubtaskTimer'
 
 interface TaskDetailsModalProps {
     isOpen: boolean
@@ -14,9 +15,10 @@ interface TaskDetailsModalProps {
 
 export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: TaskDetailsModalProps) {
     // Data State
-    const [description, setDescription] = useState('')
+    const [subtasksContent, setSubtasksContent] = useState('')
     const [title, setTitle] = useState('')
     const [statuses, setStatuses] = useState<any[]>([])
+    const [progress, setProgress] = useState(0)
 
     // Load statuses
     useEffect(() => {
@@ -35,18 +37,36 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
     // Initialize
     useEffect(() => {
         if (isOpen && task) {
-            setDescription(task.description || '')
+            setSubtasksContent(task.subtasks_content || '')
             setTitle(task.title || '')
+            calculateProgress(task.subtasks_content || '')
         }
     }, [isOpen, task])
 
-    const handleUpdateDescription = async (newDesc: string) => {
-        setDescription(newDesc)
+    const calculateProgress = (htmlContent: string) => {
+        if (!htmlContent) {
+            setProgress(0)
+            return
+        }
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(htmlContent, 'text/html')
+        const allTodos = doc.querySelectorAll('li[data-type="taskItem"]')
+        const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
+        if (allTodos.length === 0) {
+            setProgress(0)
+        } else {
+            setProgress(Math.round((completedTodos.length / allTodos.length) * 100))
+        }
+    }
+
+    const handleUpdateSubtasks = async (newContent: string) => {
+        setSubtasksContent(newContent)
+        calculateProgress(newContent)
         try {
-            await supabase.from('tasks').update({ description: newDesc }).eq('id', task.id)
+            await supabase.from('tasks').update({ subtasks_content: newContent }).eq('id', task.id)
             onUpdate()
         } catch (error) {
-            console.error('Error updating description:', error)
+            console.error('Error updating subtasks:', error)
         }
     }
 
@@ -169,21 +189,41 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     </div>
                     <hr style={{ border: 'none', borderBottom: '1px solid #e5e7eb', margin: '2rem 0' }} />
 
-                    {/* Description */}
+                    {/* Comments Section */}
+                    <TaskComments taskId={task.id} />
+
+                    <hr style={{ border: 'none', borderBottom: '1px solid #e5e7eb', margin: '2rem 0' }} />
+
+                    {/* Subtasks Section */}
                     <div style={{ marginBottom: '3rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#374151' }}>
-                            <AlignLeft size={20} />
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Description</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#374151' }}>
+                                <CheckSquare size={20} />
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Subtasks</h3>
+                            </div>
+                            {progress > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ width: '100px', height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${progress}%`, height: '100%', background: '#4f46e5', transition: 'width 0.3s' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#4f46e5' }}>{progress}%</span>
+                                </div>
+                            )}
                         </div>
                         <div className="notion-editor-wrapper">
                             <RichTextEditor
-                                value={description}
-                                onChange={handleUpdateDescription}
-                                placeholder="Type a description... (Type '/' for commands)"
-                                style={{ minHeight: '100px' }}
+                                value={subtasksContent}
+                                onChange={handleUpdateSubtasks}
+                                placeholder="Add subtasks using '/' → To-do List"
+                                style={{ minHeight: '150px' }}
                             />
                         </div>
                     </div>
+
+                    <hr style={{ border: 'none', borderBottom: '1px solid #e5e7eb', margin: '2rem 0' }} />
+
+                    {/* Subtask Timer */}
+                    <SubtaskTimer taskId={task.id} subtasksContent={subtasksContent} />
 
                 </div>
             </div>

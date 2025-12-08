@@ -132,6 +132,7 @@ export default function CCDashboard() {
                     title,
                     due_date,
                     status_id,
+                    assigned_to,
                     department:departments!inner(
                         workspace:workspaces!inner(
                             client:clients!inner(
@@ -139,7 +140,8 @@ export default function CCDashboard() {
                             )
                         )
                     ),
-                    status:task_statuses(label)
+                    status:task_statuses(label),
+                    assignee:profiles!tasks_assigned_to_fkey(full_name)
                 `)
                 .eq('department.workspace.client.cc_id', user.id)
                 .lt('due_date', new Date().toISOString())
@@ -157,6 +159,34 @@ export default function CCDashboard() {
                 for (const task of overdueTasks) {
                     const notificationTitle = `Task Overdue: ${task.title}`
 
+                    // Get all employees for this CC
+                    const { data: allEmployees } = await supabase
+                        .from('profiles')
+                        .select('id, full_name')
+                        .eq('role', 'employee')
+                        .eq('created_by', user.id)
+
+                    // Get employees assigned to THIS overdue task
+                    const { data: taskAssignments } = await supabase
+                        .from('task_assignments')
+                        .select('employee_id')
+                        .eq('task_id', task.id)
+
+                    const assignedEmployeeIds = new Set(taskAssignments?.map(a => a.employee_id) || [])
+
+                    // Find the names of employees assigned to this overdue task
+                    const assignedEmployees = allEmployees?.filter(emp => assignedEmployeeIds.has(emp.id)) || []
+                    const assignedNames = assignedEmployees.map(emp => emp.full_name).join(', ')
+
+                    const dueDate = new Date(task.due_date).toLocaleDateString()
+
+                    let message = `The task "${task.title}" was due on ${dueDate}.`
+                    if (assignedNames) {
+                        message += ` Assigned to: ${assignedNames}`
+                    } else {
+                        message += ` No employees assigned.`
+                    }
+
                     // Check if notification already exists
                     const { data: existing } = await supabase
                         .from('notifications')
@@ -168,7 +198,7 @@ export default function CCDashboard() {
                     if (!existing) {
                         await createNotification(
                             notificationTitle,
-                            `The task "${task.title}" was due on ${new Date(task.due_date).toLocaleDateString()}`,
+                            message,
                             'warning'
                         )
                     }

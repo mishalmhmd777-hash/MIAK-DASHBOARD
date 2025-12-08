@@ -17,6 +17,7 @@ interface Task {
     id: string
     title: string
     description?: string
+    subtasks_content?: string
     status_id: string
     priority: 'low' | 'medium' | 'high'
     due_date?: string
@@ -296,6 +297,16 @@ export default function DepartmentTasksModal({
         return tmp.textContent || tmp.innerText || ''
     }
 
+    const calculateProgress = (subtasksContent: string | undefined): number => {
+        if (!subtasksContent) return 0
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(subtasksContent, 'text/html')
+        const allTodos = doc.querySelectorAll('li[data-type="taskItem"]')
+        const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
+        if (allTodos.length === 0) return 0
+        return Math.round((completedTodos.length / allTodos.length) * 100)
+    }
+
     const handleCreateStatus = async (label: string) => {
         if (!departmentId) return
 
@@ -541,6 +552,16 @@ export default function DepartmentTasksModal({
                                                     {formatDuration(timeLogged)}
                                                 </div>
                                             </div>
+                                            {task.subtasks_content && calculateProgress(task.subtasks_content) > 0 && (
+                                                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: '#4f46e5', transition: 'width 0.3s' }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#4f46e5', minWidth: '35px' }}>
+                                                        {calculateProgress(task.subtasks_content)}%
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 })}

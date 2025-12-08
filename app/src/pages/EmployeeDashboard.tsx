@@ -7,7 +7,7 @@ import CalendarView from '../components/CalendarView'
 import AnalyticsView from '../components/AnalyticsView'
 import GalleryView from '../components/GalleryView'
 import NotificationDropdown from '../components/NotificationDropdown'
-import { LogOut, Clock, CheckCircle2, Play, Square, List, LayoutGrid, Calendar, BarChart2, Grid, Bell } from 'lucide-react'
+import { LogOut, Clock, CheckCircle2, List, LayoutGrid, Calendar, BarChart2, Grid, Bell } from 'lucide-react'
 
 interface Task {
     id: string
@@ -36,7 +36,6 @@ export default function EmployeeDashboard() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [statuses, setStatuses] = useState<TaskStatus[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTask, setActiveTask] = useState<string | null>(null)
     const [selectedTask, setSelectedTask] = useState<Task | null>(null)
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null)
@@ -88,17 +87,7 @@ export default function EmployeeDashboard() {
             if (statusError) throw statusError
             setStatuses(statusData || [])
 
-            // Check for active timer
-            const { data: timeLogData } = await supabase
-                .from('task_time_logs')
-                .select('task_id')
-                .eq('user_id', user.id)
-                .is('end_time', null)
-                .limit(1)
 
-            if (timeLogData && timeLogData.length > 0) {
-                setActiveTask(timeLogData[0].task_id)
-            }
 
         } catch (error) {
             console.error('Error loading dashboard data:', error)
@@ -124,47 +113,7 @@ export default function EmployeeDashboard() {
         }
     }
 
-    const handleToggleTimer = async (taskId: string) => {
-        try {
-            if (activeTask === taskId) {
-                // Stop timer
-                const { error } = await supabase
-                    .from('task_time_logs')
-                    .update({ end_time: new Date().toISOString() })
-                    .eq('task_id', taskId)
-                    .is('end_time', null)
-                    .eq('user_id', user?.id)
 
-                if (error) throw error
-                setActiveTask(null)
-            } else {
-                // Stop any currently running timer first
-                if (activeTask) {
-                    await supabase
-                        .from('task_time_logs')
-                        .update({ end_time: new Date().toISOString() })
-                        .eq('task_id', activeTask)
-                        .is('end_time', null)
-                        .eq('user_id', user?.id)
-                }
-
-                // Start new timer
-                const { error } = await supabase
-                    .from('task_time_logs')
-                    .insert({
-                        task_id: taskId,
-                        user_id: user?.id,
-                        start_time: new Date().toISOString()
-                    })
-
-                if (error) throw error
-                setActiveTask(taskId)
-            }
-        } catch (error) {
-            console.error('Error toggling timer:', error)
-            alert('Failed to update timer')
-        }
-    }
 
     const stripHtml = (html: string) => {
         const tmp = document.createElement('DIV')
@@ -703,33 +652,7 @@ export default function EmployeeDashboard() {
                                                     ))}
                                             </select>
 
-                                            <button
-                                                onClick={() => handleToggleTimer(task.id)}
-                                                style={{
-                                                    padding: '0.5rem',
-                                                    background: activeTask === task.id ? '#fee2e2' : '#ecfdf5',
-                                                    color: activeTask === task.id ? '#b91c1c' : '#059669',
-                                                    border: 'none',
-                                                    borderRadius: '0.5rem',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.5rem',
-                                                    fontWeight: '500',
-                                                    fontSize: '0.875rem',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                {activeTask === task.id ? (
-                                                    <>
-                                                        <Square size={16} fill="currentColor" /> Stop Timer
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Play size={16} fill="currentColor" /> Start Timer
-                                                    </>
-                                                )}
-                                            </button>
+
                                         </div>
                                     </div>
                                 ))}
