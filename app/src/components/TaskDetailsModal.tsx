@@ -11,6 +11,7 @@ interface TaskDetailsModalProps {
     onClose: () => void
     task: any
     onUpdate: () => void
+    isCoordinator?: boolean
 }
 
 export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: TaskDetailsModalProps) {
@@ -62,8 +63,33 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
     const handleUpdateSubtasks = async (newContent: string) => {
         setSubtasksContent(newContent)
         calculateProgress(newContent)
+
+        // Check if all subtasks are completed
+        let newStatusId = undefined
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(newContent, 'text/html')
+        const allTodos = doc.querySelectorAll('li[data-type="taskItem"]')
+        const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
+
+        if (allTodos.length > 0 && allTodos.length === completedTodos.length) {
+            // Find 'Done' status
+            const doneStatus = statuses.find(s =>
+                s.label.toLowerCase().includes('done') ||
+                s.label.toLowerCase().includes('complete') ||
+                s.label.toLowerCase().includes('finish')
+            )
+            if (doneStatus && task.status_id !== doneStatus.id) {
+                newStatusId = doneStatus.id
+            }
+        }
+
         try {
-            await supabase.from('tasks').update({ subtasks_content: newContent }).eq('id', task.id)
+            const updates: any = { subtasks_content: newContent }
+            if (newStatusId) {
+                updates.status_id = newStatusId
+            }
+
+            await supabase.from('tasks').update(updates).eq('id', task.id)
             onUpdate()
         } catch (error) {
             console.error('Error updating subtasks:', error)

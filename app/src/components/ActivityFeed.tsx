@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Clock, User } from 'lucide-react'
+import { Clock, User, Trash2 } from 'lucide-react'
 
 interface Activity {
     id: string
@@ -45,6 +45,25 @@ export default function ActivityFeed() {
             setActivities(data)
         }
         setLoading(false)
+    }
+
+    const deleteActivity = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!confirm('Are you sure you want to delete this activity?')) return
+
+        try {
+            const { error } = await supabase
+                .from('activities')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+
+            setActivities(prev => prev.filter(a => a.id !== id))
+        } catch (error) {
+            console.error('Error deleting activity:', error)
+            alert('Failed to delete activity')
+        }
     }
 
     if (loading) {
@@ -94,7 +113,7 @@ export default function ActivityFeed() {
                             }}>
                                 <User size={14} color="var(--text-secondary)" />
                             </div>
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                                     <span style={{ fontWeight: '600' }}>{activity.profiles?.full_name || 'Unknown'}</span> {activity.description}
                                 </p>
@@ -102,6 +121,32 @@ export default function ActivityFeed() {
                                     {new Date(activity.created_at).toLocaleString()}
                                 </span>
                             </div>
+                            <button
+                                onClick={(e) => deleteActivity(activity.id, e)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    padding: '0.25rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    opacity: 0.6,
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = 'var(--danger-color)'
+                                    e.currentTarget.style.opacity = '1'
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'var(--text-secondary)'
+                                    e.currentTarget.style.opacity = '0.6'
+                                }}
+                                title="Delete activity"
+                            >
+                                <Trash2 size={14} />
+                            </button>
                         </div>
                     ))
                 )}

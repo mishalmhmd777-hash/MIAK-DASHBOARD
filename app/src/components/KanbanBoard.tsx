@@ -37,6 +37,7 @@ interface KanbanBoardProps {
     onAddStatus: (label: string) => void
     onReorderStatus: (startIndex: number, endIndex: number) => void
     onDeleteStatus: (statusId: string) => void
+    groupByLabel?: boolean
 }
 
 export default function KanbanBoard({
@@ -47,17 +48,30 @@ export default function KanbanBoard({
     onDelete,
     onAddStatus,
     onReorderStatus,
-    onDeleteStatus
+    onDeleteStatus,
+    groupByLabel = false
 }: KanbanBoardProps) {
     const [isAddingStatus, setIsAddingStatus] = useState(false)
     const [newStatusLabel, setNewStatusLabel] = useState('')
 
-    const getTasksByStatus = (statusId: string) => {
-        if (statusId === 'unassigned') {
+    const getTasksByStatus = (statusIdOrLabel: string) => {
+        if (statusIdOrLabel === 'unassigned') {
             return tasks.filter(task => !statuses.find(s => s.id === task.status_id))
         }
-        return tasks.filter(task => task.status_id === statusId)
+        if (groupByLabel) {
+            return tasks.filter(task => {
+                const status = statuses.find(s => s.id === task.status_id)
+                return status?.label === statusIdOrLabel
+            })
+        }
+        return tasks.filter(task => task.status_id === statusIdOrLabel)
     }
+
+    const processedStatuses = groupByLabel
+        ? statuses.filter((status, index, self) =>
+            index === self.findIndex((s) => s.label === status.label)
+        )
+        : statuses
 
     const displayStatuses = [
         ...(tasks.some(task => !statuses.find(s => s.id === task.status_id)) ? [{
@@ -66,7 +80,7 @@ export default function KanbanBoard({
             color: '#fee2e2',
             position: -1
         }] : []),
-        ...statuses
+        ...processedStatuses
     ]
 
     const stripHtml = (html: string) => {
@@ -115,150 +129,155 @@ export default function KanbanBoard({
                         style={{ display: 'flex', gap: '2rem', overflowX: 'auto', paddingBottom: '1.5rem', height: '100%', paddingLeft: '0.5rem', paddingRight: '0.5rem' }}
                     >
                         {/* Debug section removed */}
-                        {displayStatuses.map((status, index) => (
-                            <Draggable key={status.id} draggableId={status.id} index={index}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        style={{
-                                            ...provided.draggableProps.style,
-                                            flex: '1 0 300px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            background: '#f9fafb',
-                                            borderRadius: '1rem',
-                                            padding: '1.25rem',
-                                            height: '100%',
-                                            maxHeight: '100%'
-                                        }}
-                                    >
+                        {displayStatuses.map((status, index) => {
+                            const draggableId = groupByLabel && status.id !== 'unassigned' ? status.label : status.id
+                            return (
+                                <Draggable key={draggableId} draggableId={draggableId} index={index}>
+                                    {(provided) => (
                                         <div
-                                            {...provided.dragHandleProps}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0 0.5rem', cursor: 'grab' }}
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            style={{
+                                                ...provided.draggableProps.style,
+                                                flex: '1 0 300px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                background: '#f9fafb',
+                                                borderRadius: '1rem',
+                                                padding: '1.25rem',
+                                                height: '100%',
+                                                maxHeight: '100%'
+                                            }}
                                         >
-                                            <GripVertical size={16} color="#9ca3af" />
-                                            <div style={{
-                                                width: '12px',
-                                                height: '12px',
-                                                borderRadius: '50%',
-                                                background: status.color || '#e5e7eb'
-                                            }} />
-                                            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', margin: 0 }}>{status.label}</h3>
-                                            <span style={{ marginLeft: 'auto', background: 'white', padding: '0.25rem 0.625rem', borderRadius: '1rem', fontSize: '0.75rem', color: '#6b7280', border: '1px solid #e5e7eb' }}>
-                                                {getTasksByStatus(status.id).length}
-                                            </span>
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm(`Delete status "${status.label}"? Tasks in this status will need to be reassigned.`)) {
-                                                        onDeleteStatus(status.id)
-                                                    }
-                                                }}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}
+                                            <div
+                                                {...provided.dragHandleProps}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0 0.5rem', cursor: 'grab' }}
                                             >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-
-                                        <Droppable droppableId={status.id} type="TASK">
-                                            {(provided, snapshot) => (
-                                                <div
-                                                    {...provided.droppableProps}
-                                                    ref={provided.innerRef}
-                                                    style={{
-                                                        flex: 1,
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: '1rem',
-                                                        background: snapshot.isDraggingOver ? '#f3f4f6' : 'transparent',
-                                                        transition: 'background 0.2s',
-                                                        borderRadius: '0.5rem',
-                                                        padding: '0.25rem',
-                                                        overflowY: 'auto',
-                                                        minHeight: '100px'
+                                                <GripVertical size={16} color="#9ca3af" />
+                                                <div style={{
+                                                    width: '12px',
+                                                    height: '12px',
+                                                    borderRadius: '50%',
+                                                    background: status.color || '#e5e7eb'
+                                                }} />
+                                                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', margin: 0 }}>{status.label}</h3>
+                                                <span style={{ marginLeft: 'auto', background: 'white', padding: '0.25rem 0.625rem', borderRadius: '1rem', fontSize: '0.75rem', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+                                                    {getTasksByStatus(groupByLabel && status.id !== 'unassigned' ? status.label : status.id).length}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm(`Delete status "${status.label}"? Tasks in this status will need to be reassigned.`)) {
+                                                            onDeleteStatus(status.id)
+                                                        }
                                                     }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '4px' }}
                                                 >
-                                                    {getTasksByStatus(status.id).map((task, index) => (
-                                                        <Draggable key={task.id} draggableId={task.id} index={index}>
-                                                            {(provided, snapshot) => (
-                                                                <div
-                                                                    ref={provided.innerRef}
-                                                                    {...provided.draggableProps}
-                                                                    {...provided.dragHandleProps}
-                                                                    style={{
-                                                                        background: 'white',
-                                                                        padding: '1rem',
-                                                                        borderRadius: '0.5rem',
-                                                                        border: '1px solid #e5e7eb',
-                                                                        boxShadow: snapshot.isDragging ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                                                                        ...provided.draggableProps.style
-                                                                    }}
-                                                                >
-                                                                    <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#111827', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                                        <span>{task.title}</span>
-                                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); onEdit(task) }}
-                                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.125rem', color: '#6b7280' }}
-                                                                            >
-                                                                                <Pencil size={12} />
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); onDelete(task.id) }}
-                                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.125rem', color: '#ef4444' }}
-                                                                            >
-                                                                                <Trash2 size={12} />
-                                                                            </button>
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+
+                                            <Droppable droppableId={groupByLabel && status.id !== 'unassigned' ? status.label : status.id} type="TASK">
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        {...provided.droppableProps}
+                                                        ref={provided.innerRef}
+                                                        style={{
+                                                            flex: 1,
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            gap: '1rem',
+                                                            background: snapshot.isDraggingOver ? '#f3f4f6' : 'transparent',
+                                                            transition: 'background 0.2s',
+                                                            borderRadius: '0.5rem',
+                                                            padding: '0.25rem',
+                                                            overflowY: 'auto',
+                                                            minHeight: '100px'
+                                                        }}
+                                                    >
+                                                        {getTasksByStatus(groupByLabel && status.id !== 'unassigned' ? status.label : status.id).map((task, index) => (
+                                                            <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                                {(provided, snapshot) => (
+                                                                    <div
+                                                                        ref={provided.innerRef}
+                                                                        {...provided.draggableProps}
+                                                                        {...provided.dragHandleProps}
+                                                                        onClick={() => onEdit(task)}
+                                                                        style={{
+                                                                            background: 'white',
+                                                                            padding: '1rem',
+                                                                            borderRadius: '0.5rem',
+                                                                            border: '1px solid #e5e7eb',
+                                                                            boxShadow: snapshot.isDragging ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                                                            cursor: 'pointer',
+                                                                            ...provided.draggableProps.style
+                                                                        }}
+                                                                    >
+                                                                        <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#111827', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                            <span>{task.title}</span>
+                                                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); onEdit(task) }}
+                                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.125rem', color: '#6b7280' }}
+                                                                                >
+                                                                                    <Pencil size={12} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); onDelete(task.id) }}
+                                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.125rem', color: '#ef4444' }}
+                                                                                >
+                                                                                    <Trash2 size={12} />
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                    {task.description && (
-                                                                        <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                                            {stripHtml(task.description)}
-                                                                        </div>
-                                                                    )}
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.5rem' }}>
-                                                                            {task.assignments && task.assignments.length > 0 ? (
-                                                                                task.assignments.map((assignment, i) => (
-                                                                                    <div key={assignment.user_id} style={{
-                                                                                        width: '20px',
-                                                                                        height: '20px',
-                                                                                        borderRadius: '50%',
-                                                                                        background: '#e5e7eb',
-                                                                                        display: 'flex',
-                                                                                        alignItems: 'center',
-                                                                                        justifyContent: 'center',
-                                                                                        fontSize: '0.625rem',
-                                                                                        fontWeight: '600',
-                                                                                        color: '#4b5563',
-                                                                                        border: '1px solid white',
-                                                                                        marginLeft: i > 0 ? '-8px' : '0'
-                                                                                    }} title={assignment.user.full_name || assignment.user.email}>
-                                                                                        {(assignment.user.full_name || assignment.user.email).charAt(0).toUpperCase()}
-                                                                                    </div>
-                                                                                ))
-                                                                            ) : (
-                                                                                <span style={{ color: '#9ca3af' }}>Unassigned</span>
-                                                                            )}
-                                                                        </div>
-                                                                        {task.due_date && (
-                                                                            <div style={{ color: new Date(task.due_date) < new Date() ? '#ef4444' : '#6b7280' }}>
-                                                                                {new Date(task.due_date).toLocaleDateString()}
+                                                                        {task.description && (
+                                                                            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                                {stripHtml(task.description)}
                                                                             </div>
                                                                         )}
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', marginLeft: '0.5rem' }}>
+                                                                                {task.assignments && task.assignments.length > 0 ? (
+                                                                                    task.assignments.map((assignment, i) => (
+                                                                                        <div key={assignment.user_id} style={{
+                                                                                            width: '20px',
+                                                                                            height: '20px',
+                                                                                            borderRadius: '50%',
+                                                                                            background: '#e5e7eb',
+                                                                                            display: 'flex',
+                                                                                            alignItems: 'center',
+                                                                                            justifyContent: 'center',
+                                                                                            fontSize: '0.625rem',
+                                                                                            fontWeight: '600',
+                                                                                            color: '#4b5563',
+                                                                                            border: '1px solid white',
+                                                                                            marginLeft: i > 0 ? '-8px' : '0'
+                                                                                        }} title={assignment.user.full_name || assignment.user.email}>
+                                                                                            {(assignment.user.full_name || assignment.user.email).charAt(0).toUpperCase()}
+                                                                                        </div>
+                                                                                    ))
+                                                                                ) : (
+                                                                                    <span style={{ color: '#9ca3af' }}>Unassigned</span>
+                                                                                )}
+                                                                            </div>
+                                                                            {task.due_date && (
+                                                                                <div style={{ color: new Date(task.due_date) < new Date() ? '#ef4444' : '#6b7280' }}>
+                                                                                    {new Date(task.due_date).toLocaleDateString()}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            )}
-                                                        </Draggable>
-                                                    ))}
-                                                    {provided.placeholder}
-                                                </div>
-                                            )}
-                                        </Droppable>
-                                    </div>
-                                )}
-                            </Draggable>
-                        ))}
+                                                                )}
+                                                            </Draggable>
+                                                        ))}
+                                                        {provided.placeholder}
+                                                    </div>
+                                                )}
+                                            </Droppable>
+                                        </div>
+                                    )}
+                                </Draggable>
+                            )
+                        })}
                         {provided.placeholder}
 
                         {/* Add Status Button */}

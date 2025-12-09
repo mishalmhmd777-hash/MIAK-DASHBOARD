@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { Bell, Check } from 'lucide-react'
+import { Bell, Check, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Notification {
@@ -92,6 +92,46 @@ export default function NotificationCenter({ hideIfEmpty = false }: Notification
         setUnreadCount(0)
     }
 
+    const deleteNotification = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+
+        try {
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+
+            setNotifications(prev => {
+                const newNotifications = prev.filter(n => n.id !== id)
+                setUnreadCount(newNotifications.filter(n => !n.is_read).length)
+                return newNotifications
+            })
+        } catch (error) {
+            console.error('Error deleting notification:', error)
+        }
+    }
+
+    const clearAllNotifications = async () => {
+        if (!user) return
+        if (!confirm('Are you sure you want to delete all notifications?')) return
+
+        try {
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('user_id', user.id)
+
+            if (error) throw error
+
+            setNotifications([])
+            setUnreadCount(0)
+        } catch (error) {
+            console.error('Error clearing notifications:', error)
+        }
+    }
+
     if (hideIfEmpty && notifications.length === 0) {
         return null
     }
@@ -159,21 +199,38 @@ export default function NotificationCenter({ hideIfEmpty = false }: Notification
                         background: 'var(--bg-primary)'
                     }}>
                         <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)' }}>Notifications</h3>
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={markAllAsRead}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#4f46e5',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                Mark all read
-                            </button>
-                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={markAllAsRead}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--accent-color)',
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    Mark all read
+                                </button>
+                            )}
+                            {notifications.length > 0 && (
+                                <button
+                                    onClick={clearAllNotifications}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--danger-color)',
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    Clear all
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                         {notifications.length === 0 ? (
@@ -200,24 +257,46 @@ export default function NotificationCenter({ hideIfEmpty = false }: Notification
                                                 {new Date(notification.created_at).toLocaleString()}
                                             </div>
                                         </div>
-                                        {!notification.is_read && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            {!notification.is_read && (
+                                                <button
+                                                    onClick={() => markAsRead(notification.id)}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'var(--accent-color)',
+                                                        cursor: 'pointer',
+                                                        padding: '0.25rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                    title="Mark as read"
+                                                >
+                                                    <Check size={14} />
+                                                </button>
+                                            )}
                                             <button
-                                                onClick={() => markAsRead(notification.id)}
+                                                onClick={(e) => deleteNotification(notification.id, e)}
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: '#4f46e5',
+                                                    color: 'var(--text-secondary)',
                                                     cursor: 'pointer',
                                                     padding: '0.25rem',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center'
+                                                    justifyContent: 'center',
+                                                    opacity: 0.5,
+                                                    transition: 'opacity 0.2s'
                                                 }}
-                                                title="Mark as read"
+                                                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+                                                title="Delete notification"
                                             >
-                                                <Check size={14} />
+                                                <Trash2 size={14} />
                                             </button>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
                             ))

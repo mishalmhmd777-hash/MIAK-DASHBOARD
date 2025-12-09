@@ -30,16 +30,28 @@
 }
 
 [data-theme='dark'] {
-  /* Dark Theme Variables */
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --border-color: #374151;
-  --accent-color: #6366f1;
-  --accent-hover: #818cf8;
-  --modal-overlay: rgba(0, 0, 0, 0.7);
+  /* Dark Theme Variables - Premium Midnight/Zinc */
+  --bg-primary: #09090b;
+  /* zinc-950 */
+  --bg-secondary: #18181b;
+  /* zinc-900 */
+  --bg-tertiary: #27272a;
+  /* zinc-800 */
+  --text-primary: #f4f4f5;
+  /* zinc-100 */
+  --text-secondary: #a1a1aa;
+  /* zinc-400 */
+  --border-color: #27272a;
+  /* zinc-800 */
+  --accent-color: #818cf8;
+  /* indigo-400 */
+  --accent-hover: #a5b4fc;
+  /* indigo-300 */
+  --danger-color: #f87171;
+  /* red-400 */
+  --success-color: #34d399;
+  /* emerald-400 */
+  --modal-overlay: rgba(0, 0, 0, 0.85);
 
   color-scheme: dark;
 }

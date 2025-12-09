@@ -117,8 +117,40 @@ export default function CCDashboard() {
         loadProfile()
         loadClients()
         loadEmployees()
-        checkOverdueTasks()
+        cleanupDuplicates().then(() => {
+            checkOverdueTasks()
+        })
     }, [user])
+
+    const cleanupDuplicates = async () => {
+        if (!user) return
+
+        const { data: notifs } = await supabase
+            .from('notifications')
+            .select('id, title, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+
+        if (!notifs) return
+
+        const seenTitles = new Set()
+        const idsToDelete: string[] = []
+
+        for (const n of notifs) {
+            if (seenTitles.has(n.title)) {
+                idsToDelete.push(n.id)
+            } else {
+                seenTitles.add(n.title)
+            }
+        }
+
+        if (idsToDelete.length > 0) {
+            await supabase
+                .from('notifications')
+                .delete()
+                .in('id', idsToDelete)
+        }
+    }
 
     const checkOverdueTasks = async () => {
         if (!user) return
@@ -159,24 +191,27 @@ export default function CCDashboard() {
                 for (const task of overdueTasks) {
                     const notificationTitle = `Task Overdue: ${task.title}`
 
-                    // Get all employees for this CC
-                    const { data: allEmployees } = await supabase
-                        .from('profiles')
-                        .select('id, full_name')
-                        .eq('role', 'employee')
-                        .eq('created_by', user.id)
-
                     // Get employees assigned to THIS overdue task
+                    // We fetch profiles directly for the assigned users
                     const { data: taskAssignments } = await supabase
                         .from('task_assignments')
-                        .select('employee_id')
+                        .select('user_id')
                         .eq('task_id', task.id)
 
-                    const assignedEmployeeIds = new Set(taskAssignments?.map(a => a.employee_id) || [])
+                    const assignedIds = taskAssignments?.map(a => a.user_id) || []
+                    let assignedNames = ''
 
-                    // Find the names of employees assigned to this overdue task
-                    const assignedEmployees = allEmployees?.filter(emp => assignedEmployeeIds.has(emp.id)) || []
-                    const assignedNames = assignedEmployees.map(emp => emp.full_name).join(', ')
+                    if (assignedIds.length > 0) {
+                        const { data: profiles } = await supabase
+                            .from('profiles')
+                            .select('full_name')
+                            .in('id', assignedIds)
+                            .order('full_name', { ascending: true })
+
+                        if (profiles) {
+                            assignedNames = profiles.map(p => p.full_name).join(', ')
+                        }
+                    }
 
                     const dueDate = new Date(task.due_date).toLocaleDateString()
 
@@ -188,12 +223,14 @@ export default function CCDashboard() {
                     }
 
                     // Check if notification already exists
-                    const { data: existing } = await supabase
+                    const { data: existingData } = await supabase
                         .from('notifications')
-                        .select('id')
+                        .select('id, message')
                         .eq('user_id', user.id)
                         .eq('title', notificationTitle)
-                        .single()
+                        .limit(1)
+
+                    const existing = existingData?.[0]
 
                     if (!existing) {
                         await createNotification(
@@ -201,6 +238,13 @@ export default function CCDashboard() {
                             message,
                             'warning'
                         )
+                    } else if (existing.message !== message) {
+                        // Update existing notification if message has changed (e.g. employees assigned)
+                        // Do NOT mark as unread to avoid repeating alerts
+                        await supabase
+                            .from('notifications')
+                            .update({ message: message })
+                            .eq('id', existing.id)
                     }
                 }
             }
@@ -645,7 +689,7 @@ export default function CCDashboard() {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#6b7280' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-secondary)', background: 'var(--bg-primary)' }}>
                 <div className="animate-pulse">Loading dashboard...</div>
             </div>
         )
@@ -714,7 +758,7 @@ export default function CCDashboard() {
 
                     <div style={{ flex: 1, maxWidth: '400px', margin: '0 2rem' }}>
                         <div style={{ position: 'relative' }}>
-                            <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                            <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                             <input
                                 type="text"
                                 placeholder="Search..."
@@ -723,14 +767,16 @@ export default function CCDashboard() {
                                 style={{
                                     width: '100%',
                                     padding: '0.5rem 0.5rem 0.5rem 2.5rem',
+                                    background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
                                     border: '1px solid var(--border-color)',
                                     borderRadius: '0.5rem',
                                     fontSize: '0.875rem',
                                     outline: 'none',
                                     transition: 'border-color 0.2s',
                                 }}
-                                onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
-                                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                                onFocus={(e) => e.target.style.borderColor = 'var(--accent-color)'}
+                                onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                             />
                         </div>
                     </div>
@@ -759,8 +805,8 @@ export default function CCDashboard() {
                             style={{
                                 padding: '0.5rem 1rem',
                                 background: 'var(--bg-secondary)',
-                                color: '#4f46e5',
-                                border: '1px solid #e0e7ff',
+                                color: 'var(--accent-color)',
+                                border: '1px solid var(--border-color)',
                                 borderRadius: '0.5rem',
                                 cursor: 'pointer',
                                 fontWeight: '600',
@@ -771,12 +817,12 @@ export default function CCDashboard() {
                                 transition: 'all 0.2s',
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#eef2ff';
-                                e.currentTarget.style.borderColor = '#c7d2fe';
+                                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                                e.currentTarget.style.borderColor = 'var(--accent-color)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'white';
-                                e.currentTarget.style.borderColor = '#e0e7ff';
+                                e.currentTarget.style.background = 'var(--bg-secondary)';
+                                e.currentTarget.style.borderColor = 'var(--border-color)';
                             }}
                         >
                             <BarChart3 size={18} />
@@ -787,8 +833,8 @@ export default function CCDashboard() {
                             style={{
                                 padding: '0.5rem 1rem',
                                 background: 'var(--bg-secondary)',
-                                color: '#ef4444',
-                                border: '1px solid #fee2e2',
+                                color: 'var(--danger-color)',
+                                border: '1px solid var(--border-color)',
                                 borderRadius: '0.5rem',
                                 cursor: 'pointer',
                                 fontWeight: '600',
@@ -799,12 +845,12 @@ export default function CCDashboard() {
                                 transition: 'all 0.2s',
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#fef2f2';
-                                e.currentTarget.style.borderColor = '#fecaca';
+                                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                                e.currentTarget.style.borderColor = 'var(--danger-color)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'white';
-                                e.currentTarget.style.borderColor = '#fee2e2';
+                                e.currentTarget.style.background = 'var(--bg-secondary)';
+                                e.currentTarget.style.borderColor = 'var(--border-color)';
                             }}
                             onClick={handleSignOut}
                         >
@@ -846,7 +892,7 @@ export default function CCDashboard() {
                             <div style={{
                                 padding: '1rem',
                                 borderRadius: '0.75rem',
-                                background: stat.bg,
+                                background: theme === 'dark' ? 'var(--bg-tertiary)' : stat.bg,
                                 color: stat.color,
                             }}>
                                 <stat.icon size={24} />
@@ -898,7 +944,7 @@ export default function CCDashboard() {
                             </div>
                             <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
                                 {filteredClients.length === 0 ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                                         {searchTerm ? 'No clients match your search.' : 'No clients found. Add one to get started.'}
                                     </div>
                                 ) : (
@@ -913,8 +959,8 @@ export default function CCDashboard() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                background: selectedClient === client.id ? '#eef2ff' : 'transparent',
-                                                color: selectedClient === client.id ? '#4f46e5' : '#374151',
+                                                background: selectedClient === client.id ? 'var(--bg-tertiary)' : 'transparent',
+                                                color: selectedClient === client.id ? 'var(--accent-color)' : 'var(--text-primary)',
                                                 fontWeight: selectedClient === client.id ? '600' : '400',
                                                 transition: 'all 0.2s',
                                             }}
@@ -929,14 +975,14 @@ export default function CCDashboard() {
                                                             setClientName(client.name)
                                                             setShowAddClient(true)
                                                         }}
-                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                         title="Edit"
                                                     >
                                                         <Pencil size={14} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteClient(client.id)}
-                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                         title="Delete"
                                                     >
                                                         <Trash2 size={14} />
@@ -984,7 +1030,7 @@ export default function CCDashboard() {
                                 </div>
                                 <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
                                     {filteredWorkspaces.length === 0 ? (
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                                             {searchTerm ? 'No workspaces match your search.' : 'No workspaces found.'}
                                         </div>
                                     ) : (
@@ -999,8 +1045,8 @@ export default function CCDashboard() {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    background: selectedWorkspace === ws.id ? '#ecfeff' : 'transparent',
-                                                    color: selectedWorkspace === ws.id ? '#0891b2' : '#374151',
+                                                    background: selectedWorkspace === ws.id ? 'var(--bg-tertiary)' : 'transparent',
+                                                    color: selectedWorkspace === ws.id ? '#0891b2' : 'var(--text-primary)',
                                                     fontWeight: selectedWorkspace === ws.id ? '600' : '400',
                                                     transition: 'all 0.2s',
                                                 }}
@@ -1015,14 +1061,14 @@ export default function CCDashboard() {
                                                                 setWorkspaceName(ws.name)
                                                                 setShowAddWorkspace(true)
                                                             }}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                             title="Edit"
                                                         >
                                                             <Pencil size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteWorkspace(ws.id)}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={14} />
@@ -1071,7 +1117,7 @@ export default function CCDashboard() {
                                 </div>
                                 <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
                                     {filteredDepartments.length === 0 ? (
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                                             {searchTerm ? 'No departments match your search.' : 'No departments in this workspace.'}
                                         </div>
                                     ) : (
@@ -1085,7 +1131,7 @@ export default function CCDashboard() {
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
                                                     background: 'transparent',
-                                                    color: '#374151',
+                                                    color: 'var(--text-primary)',
                                                     transition: 'all 0.2s',
                                                 }}
                                             >
@@ -1098,14 +1144,14 @@ export default function CCDashboard() {
                                                                 setDepartmentName(dept.name)
                                                                 setShowAddDepartment(true)
                                                             }}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                             title="Edit"
                                                         >
                                                             <Pencil size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteDepartment(dept.id)}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={14} />
@@ -1117,8 +1163,8 @@ export default function CCDashboard() {
                                                         onClick={() => handleOpenAssignEmployees(dept.id)}
                                                         style={{
                                                             padding: '0.25rem 0.5rem',
-                                                            background: '#f3f4f6',
-                                                            color: '#4b5563',
+                                                            background: 'var(--bg-tertiary)',
+                                                            color: 'var(--text-primary)',
                                                             border: 'none',
                                                             borderRadius: '0.25rem',
                                                             fontSize: '0.75rem',
@@ -1137,8 +1183,8 @@ export default function CCDashboard() {
                                                         }}
                                                         style={{
                                                             padding: '0.25rem 0.5rem',
-                                                            background: '#e0e7ff',
-                                                            color: '#4f46e5',
+                                                            background: 'var(--bg-tertiary)',
+                                                            color: 'var(--accent-color)',
                                                             border: 'none',
                                                             borderRadius: '0.25rem',
                                                             fontSize: '0.75rem',
@@ -1167,6 +1213,7 @@ export default function CCDashboard() {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
+                            background: 'var(--bg-primary)',
                         }}>
                             <div>
                                 <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -1185,7 +1232,7 @@ export default function CCDashboard() {
                                         borderRadius: '0.5rem',
                                         border: '1px solid var(--border-color)',
                                         fontSize: '0.875rem',
-                                        color: '#374151',
+                                        color: 'var(--text-primary)',
                                         outline: 'none',
                                         cursor: 'pointer',
                                         background: 'var(--bg-secondary)',
@@ -1220,13 +1267,13 @@ export default function CCDashboard() {
                             {filteredEmployees.length === 0 ? (
                                 <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
                                     <div style={{
-                                        width: '64px', height: '64px', background: '#f3f4f6', borderRadius: '50%',
+                                        width: '64px', height: '64px', background: 'var(--bg-tertiary)', borderRadius: '50%',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
-                                        color: '#9ca3af'
+                                        color: 'var(--text-secondary)'
                                     }}>
                                         <UserPlus size={32} />
                                     </div>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>No employees yet</h3>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No employees yet</h3>
                                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                                         Start by adding employees to your organization.
                                     </p>
@@ -1244,11 +1291,11 @@ export default function CCDashboard() {
                                     </thead>
                                     <tbody>
                                         {filteredEmployees.map((emp) => (
-                                            <tr key={emp.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                            <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                                 <td style={{ padding: '1rem 1.5rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                                         <div style={{
-                                                            width: '32px', height: '32px', borderRadius: '50%', background: '#e0e7ff', color: '#4f46e5',
+                                                            width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', color: 'var(--accent-color)',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.875rem'
                                                         }}>
                                                             {emp.full_name?.[0]?.toUpperCase() || emp.email[0].toUpperCase()}
@@ -1270,7 +1317,7 @@ export default function CCDashboard() {
                                                             fontSize: '0.75rem',
                                                             fontWeight: '500',
                                                             border: 'none',
-                                                            background: emp.status === 'inactive' ? '#fef2f2' : '#ecfdf5',
+                                                            background: emp.status === 'inactive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
                                                             color: emp.status === 'inactive' ? '#ef4444' : '#059669',
                                                             cursor: 'pointer',
                                                             outline: 'none',
@@ -1298,8 +1345,8 @@ export default function CCDashboard() {
                                                                 color: 'var(--text-secondary)',
                                                                 transition: 'color 0.2s',
                                                             }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = '#4f46e5'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+                                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                                                             title="Edit"
                                                         >
                                                             <Pencil size={16} />
@@ -1314,8 +1361,8 @@ export default function CCDashboard() {
                                                                 color: 'var(--text-secondary)',
                                                                 transition: 'color 0.2s',
                                                             }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+                                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger-color)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={16} />

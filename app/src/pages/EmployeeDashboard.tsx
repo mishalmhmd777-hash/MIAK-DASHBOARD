@@ -1,46 +1,128 @@
-import { useAuth } from '../contexts/AuthContext'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import { LayoutGrid, List, LogOut, Moon, Sun, CheckCircle2, User, Calendar, Flag, BarChart2 } from 'lucide-react'
 import KanbanBoard from '../components/KanbanBoard'
 import TaskDetailsModal from '../components/TaskDetailsModal'
-import CalendarView from '../components/CalendarView'
-import AnalyticsView from '../components/AnalyticsView'
-import GalleryView from '../components/GalleryView'
-import NotificationDropdown from '../components/NotificationDropdown'
-import { LogOut, Clock, CheckCircle2, List, LayoutGrid, Calendar, BarChart2, Grid, Bell } from 'lucide-react'
-
-interface Task {
-    id: string
-    title: string
-    description: string
-    status_id: string
-    priority: 'low' | 'medium' | 'high'
-    due_date: string
-    created_at: string
-    department_id: string
-    department?: {
-        name: string
-    }
-}
-
-interface TaskStatus {
-    id: string
-    label: string
-    color: string
-    position: number
-    department_id: string
-}
+import NotificationCenter from '../components/NotificationCenter'
+import TaskCalendar from '../components/TaskCalendar'
+import TaskChart from '../components/TaskChart'
 
 export default function EmployeeDashboard() {
     const { user, signOut } = useAuth()
-    const [tasks, setTasks] = useState<Task[]>([])
-    const [statuses, setStatuses] = useState<TaskStatus[]>([])
+    const { theme, toggleTheme } = useTheme()
+    const [tasks, setTasks] = useState<any[]>([])
+    const [statuses, setStatuses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
-    const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null)
-    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'analytics' | 'gallery'>('board')
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'chart'>('list')
+    const [selectedTask, setSelectedTask] = useState<any>(null)
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+
+    useEffect(() => {
+        loadData()
+
+        const taskSubscription = supabase
+            .channel('employee_dashboard_tasks')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+                loadData()
+            })
+            .subscribe()
+
+        return () => {
+            taskSubscription.unsubscribe()
+        }
+    }, [user])
+
+    const loadData = async () => {
+        if (!user) return
+
+        try {
+            // 1. Get assignments for current user
+            const { data: assignments, error: assignError } = await supabase
+                .from('task_assignments')
+                .select('task_id')
+                .eq('user_id', user.id)
+
+            if (assignError) throw assignError
+
+            if (!assignments || assignments.length === 0) {
+                setTasks([])
+                setLoading(false)
+                return
+            }
+
+            const taskIds = assignments.map(a => a.task_id)
+
+            // 2. Get Tasks
+            const { data: tasksData, error: tasksError } = await supabase
+                .from('tasks')
+                .select(`
+                    *,
+                    assignments:task_assignments(
+                        user_id,
+                        user:profiles(full_name, email)
+                    )
+                `)
+                .in('id', taskIds)
+                .order('created_at', { ascending: false })
+
+            if (tasksError) throw tasksError
+
+            // 3. Get Statuses
+            const branchIds = [...new Set(tasksData?.map(t => t.department_id) || [])]
+
+            if (branchIds.length > 0) {
+                const { data: statusesData } = await supabase
+                    .from('task_statuses')
+                    .select('*')
+                    .in('department_id', branchIds)
+                    .order('position')
+
+                setStatuses(statusesData || [])
+            }
+
+            setTasks(tasksData || [])
+        } catch (error) {
+            console.error('Error loading tasks:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleUpdateTaskStatus = async (taskId: string, newStatusLabel: string) => {
+        const task = tasks.find(t => t.id === taskId)
+        if (!task) return
+
+        // Try to find status by Label AND Department first
+        let newStatus = statuses.find(s =>
+            s.department_id === task.department_id &&
+            (s.id === newStatusLabel || s.label === newStatusLabel)
+        )
+
+        // Fallback: If passed ID is actually a Status ID (not Label), this works.
+        // Or if we need to fall back to ANY status with that label (less safe but OK for display grouping)
+        if (!newStatus) {
+            newStatus = statuses.find(s => s.id === newStatusLabel || s.label === newStatusLabel)
+        }
+
+        if (!newStatus) return
+
+        // Optimistic update
+        setTasks(prev => prev.map(t =>
+            t.id === taskId ? { ...t, status_id: newStatus.id } : t
+        ))
+
+        const { error } = await supabase
+            .from('tasks')
+            .update({ status_id: newStatus.id })
+            .eq('id', taskId)
+
+        if (error) {
+            console.error('Error updating status:', error)
+            loadData()
+        }
+    }
 
     const handleSignOut = async () => {
         try {
@@ -50,624 +132,310 @@ export default function EmployeeDashboard() {
         }
     }
 
-    useEffect(() => {
-        loadData(true)
-    }, [user])
-
-    const handleOpenTaskDetails = (task: Task) => {
-        setSelectedTask(task)
-        setIsDetailsModalOpen(true)
-    }
-
-    const loadData = async (isInitialLoad = false) => {
-        if (!user) return
-        if (isInitialLoad) setLoading(true)
-        try {
-            // Load tasks assigned to user
-            const { data: tasksData, error: tasksError } = await supabase
-                .from('tasks')
-                .select('*, department:departments(name), task_assignments!inner(user_id, user:profiles(full_name, email))')
-                .eq('task_assignments.user_id', user.id)
-                .order('due_date', { ascending: true })
-
-            if (tasksError) throw tasksError
-            setTasks(tasksData || [])
-
-            // Set initial department if not set
-            if (tasksData && tasksData.length > 0 && !selectedDepartmentId) {
-                setSelectedDepartmentId(tasksData[0].department_id)
-            }
-
-            // Load task statuses
-            const { data: statusData, error: statusError } = await supabase
-                .from('task_statuses')
-                .select('*')
-                .order('position')
-
-            if (statusError) throw statusError
-            setStatuses(statusData || [])
-
-
-
-        } catch (error) {
-            console.error('Error loading dashboard data:', error)
-        } finally {
-            if (isInitialLoad) setLoading(false)
-        }
-    }
-
-    const handleStatusChange = async (taskId: string, newStatusId: string) => {
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ status_id: newStatusId })
-                .eq('id', taskId)
-
-            if (error) throw error
-
-            // Optimistic update
-            setTasks(tasks.map(t => t.id === taskId ? { ...t, status_id: newStatusId } : t))
-        } catch (error) {
-            console.error('Error updating status:', error)
-            alert('Failed to update status')
-        }
-    }
-
-
-
-    const stripHtml = (html: string) => {
-        const tmp = document.createElement('DIV')
-        tmp.innerHTML = html
-        return tmp.textContent || tmp.innerText || ''
-    }
-
-    if (loading) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#6b7280' }}>
-                <div className="animate-pulse">Loading dashboard...</div>
-            </div>
-        )
-    }
-
-    // Get unique departments from tasks
-    const availableDepartments = Array.from(new Set(tasks.map(t => t.department_id)))
-        .map(id => {
-            const task = tasks.find(t => t.department_id === id)
-            return {
-                id,
-                name: task?.department?.name || 'Unknown Department'
-            }
-        })
-
-    // Use selected department or fallback to first available
-    const currentDepartmentId = selectedDepartmentId || (availableDepartments.length > 0 ? availableDepartments[0].id : null)
-
-    const handleCreateStatus = async (label: string) => {
-        if (!currentDepartmentId) {
-            alert('Cannot determine department to add status to.')
-            return
-        }
-
-        try {
-            const { error } = await supabase
-                .from('task_statuses')
-                .insert({
-                    department_id: currentDepartmentId,
-                    label,
-                    position: statuses.filter(s => s.department_id === currentDepartmentId).length
-                })
-
-            if (error) throw error
-            loadData()
-        } catch (error) {
-            console.error('Error creating status:', error)
-            alert('Failed to create status')
-        }
-    }
-
-    const handleReorderStatus = async (startIndex: number, endIndex: number) => {
-        if (!currentDepartmentId) return
-
-        const deptStatuses = statuses.filter(s => s.department_id === currentDepartmentId)
-        const result = Array.from(deptStatuses)
-        const [removed] = result.splice(startIndex, 1)
-        result.splice(endIndex, 0, removed)
-
-        // Optimistic update
-        const newStatuses = statuses.map(s => {
-            if (s.department_id !== currentDepartmentId) return s
-            const index = result.findIndex(r => r.id === s.id)
-            return index !== -1 ? { ...s, position: index } : s
-        }).sort((a, b) => a.position - b.position)
-
-        setStatuses(newStatuses)
-
-        try {
-            // Update all positions in db
-            const updates = result.map((s, index) => ({
-                id: s.id,
-                position: index,
-                label: s.label, // Required for upsert if not partial
-                department_id: s.department_id
-            }))
-
-            const { error } = await supabase
-                .from('task_statuses')
-                .upsert(updates)
-
-            if (error) throw error
-        } catch (error) {
-            console.error('Error reordering statuses:', error)
-            loadData() // Revert
-        }
-    }
-
-    const handleDeleteStatus = async (statusId: string) => {
-        try {
-            const { error } = await supabase
-                .from('task_statuses')
-                .delete()
-                .eq('id', statusId)
-
-            if (error) throw error
-            loadData()
-        } catch (error) {
-            console.error('Error deleting status:', error)
-            alert('Failed to delete status')
-        }
-    }
-
-    const boardStatuses = currentDepartmentId
-        ? statuses.filter(s => s.department_id === currentDepartmentId)
-        : []
-
-    // Filter tasks for the board view based on selected department
-    const boardTasks = currentDepartmentId
-        ? tasks.filter(t => t.department_id === currentDepartmentId)
-        : []
-
     return (
-        <div style={{ height: '100vh', background: '#f9fafb', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', transition: 'background-color 0.3s, color 0.3s' }}>
             {/* Header */}
             <header style={{
-                background: 'white',
-                borderBottom: '1px solid #e5e7eb',
+                background: 'var(--bg-secondary)',
+                borderBottom: '1px solid var(--border-color)',
                 padding: '1rem 2rem',
-                flexShrink: 0,
-                zIndex: 10,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                position: 'sticky',
+                top: 0,
+                zIndex: 40
             }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    width: '100%',
-                    margin: '0 auto',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: 0 }}>
-                            Employee Dashboard
-                        </h1>
-
-                        {/* Department Selector */}
-                        {availableDepartments.length > 1 && (
-                            <div style={{ position: 'relative' }}>
-                                <select
-                                    value={currentDepartmentId || ''}
-                                    onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                                    style={{
-                                        appearance: 'none',
-                                        padding: '0.375rem 2rem 0.375rem 0.75rem',
-                                        background: '#f3f4f6',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.875rem',
-                                        fontWeight: '600',
-                                        color: '#374151',
-                                        cursor: 'pointer',
-                                        outline: 'none'
-                                    }}
-                                >
-                                    {availableDepartments.map(dept => (
-                                        <option key={dept.id} value={dept.id}>
-                                            {dept.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </div>
-                            </div>
-                        )}
-                        {availableDepartments.length === 1 && (
-                            <span style={{ fontSize: '0.875rem', color: '#6b7280', background: '#f3f4f6', padding: '0.25rem 0.75rem', borderRadius: '9999px' }}>
-                                {availableDepartments[0].name}
-                            </span>
-                        )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                        WD
                     </div>
-
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', background: '#f3f4f6', padding: '0.25rem', borderRadius: '0.5rem' }}>
-                            <button
-                                onClick={() => setViewMode('list')}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: viewMode === 'list' ? 'white' : 'transparent',
-                                    color: viewMode === 'list' ? '#4f46e5' : '#6b7280',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    boxShadow: viewMode === 'list' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <List size={16} /> List
-                            </button>
-                            <button
-                                onClick={() => setViewMode('board')}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: viewMode === 'board' ? 'white' : 'transparent',
-                                    color: viewMode === 'board' ? '#4f46e5' : '#6b7280',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    boxShadow: viewMode === 'board' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <LayoutGrid size={16} /> Board
-                            </button>
-                            <button
-                                onClick={() => setViewMode('calendar')}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: viewMode === 'calendar' ? 'white' : 'transparent',
-                                    color: viewMode === 'calendar' ? '#4f46e5' : '#6b7280',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    boxShadow: viewMode === 'calendar' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <Calendar size={16} /> Calendar
-                            </button>
-                            <button
-                                onClick={() => setViewMode('analytics')}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: viewMode === 'analytics' ? 'white' : 'transparent',
-                                    color: viewMode === 'analytics' ? '#4f46e5' : '#6b7280',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    boxShadow: viewMode === 'analytics' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <BarChart2 size={16} /> Analytics
-                            </button>
-                            <button
-                                onClick={() => setViewMode('gallery')}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: viewMode === 'gallery' ? 'white' : 'transparent',
-                                    color: viewMode === 'gallery' ? '#4f46e5' : '#6b7280',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    boxShadow: viewMode === 'gallery' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <Grid size={16} /> Gallery
-                            </button>
-                        </div>
-
-                        {/* Notifications */}
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                                style={{
-                                    background: 'white',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '0.5rem',
-                                    padding: '0.5rem',
-                                    cursor: 'pointer',
-                                    color: '#6b7280',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    position: 'relative'
-                                }}
-                            >
-                                <Bell size={20} />
-                                {/* Badge calculation */}
-                                {(() => {
-                                    const now = new Date()
-                                    const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-                                    const count = boardTasks.filter(t => {
-                                        if (!t.due_date) return false
-                                        const status = boardStatuses.find(s => s.id === t.status_id)
-                                        const label = status?.label.toLowerCase() || ''
-                                        if (label.includes('done') || label.includes('complete') || label.includes('finish')) return false
-                                        const dueDate = new Date(t.due_date)
-                                        return dueDate < next24Hours
-                                    }).length
-
-                                    if (count > 0) {
-                                        return (
-                                            <span style={{
-                                                position: 'absolute',
-                                                top: '-5px',
-                                                right: '-5px',
-                                                background: '#ef4444',
-                                                color: 'white',
-                                                fontSize: '0.625rem',
-                                                fontWeight: 'bold',
-                                                minWidth: '16px',
-                                                height: '16px',
-                                                borderRadius: '50%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                padding: '0 4px'
-                                            }}>
-                                                {count}
-                                            </span>
-                                        )
-                                    }
-                                    return null
-                                })()}
-                            </button>
-                            {isNotificationsOpen && (
-                                <NotificationDropdown
-                                    tasks={boardTasks}
-                                    statuses={boardStatuses}
-                                    onTaskClick={handleOpenTaskDetails}
-                                    onClose={() => setIsNotificationsOpen(false)}
-                                />
-                            )}
-                        </div>
-
-                        <button
-                            onClick={handleSignOut}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: 'white',
-                                color: '#ef4444',
-                                border: '1px solid #fee2e2',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                fontSize: '0.875rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                            }}
-                        >
-                            <LogOut size={16} />
-                            Sign Out
-                        </button>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>My Dashboard</h1>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                            Welcome back, <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{user?.email}</span>
+                        </p>
                     </div>
                 </div>
-            </header >
 
-            <main style={{ flex: 1, maxWidth: '1400px', width: '100%', margin: '0 auto', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem', flexShrink: 0, position: 'relative', minHeight: '80px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <NotificationCenter />
+
+                    <button
+                        onClick={toggleTheme}
+                        style={{
+                            padding: '0.625rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    >
+                        {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                    </button>
+
+                    <button
+                        onClick={handleSignOut}
+                        style={{
+                            padding: '0.625rem 1.25rem',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '0.5rem',
+                            background: 'transparent',
+                            color: 'var(--danger-color)',
+                            fontWeight: '600',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                        }}
+                    >
+                        <LogOut size={16} /> Sign Out
+                    </button>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto' }}>
+
+                {/* Stats / Welcome Widget */}
+                <div style={{
+                    background: 'linear-gradient(to right, var(--accent-color), #8b5cf6)',
+                    borderRadius: '1rem',
+                    padding: '2rem',
+                    marginBottom: '2rem',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
                     <div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827' }}>
-                            Welcome back, {user?.email}
-                        </h2>
-                        <p style={{ color: '#6b7280' }}>Here are your assigned tasks for today.</p>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>Your Tasks Overview</h2>
+                        <p style={{ opacity: 0.9 }}>You have {tasks.length} tasks assigned to you across {new Set(tasks.map(t => t.department_id)).size} departments.</p>
                     </div>
+                </div>
 
-                    {/* Compact Task Progress Widget */}
-                    <div style={{
-                        background: 'white',
-                        padding: '1rem 1.25rem',
-                        borderRadius: '0.75rem',
-                        border: '1px solid #e5e7eb',
-                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                        width: '280px',
-                        position: 'absolute',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        top: 0
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>Task Progress</span>
-                            <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#4f46e5' }}>
-                                {tasks.length > 0 ? Math.round((tasks.filter(t => statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('done') || statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('completed')).length / tasks.length) * 100) : 0}%
-                            </span>
-                        </div>
+                {/* Toolbar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>Assigned Tasks</h2>
 
-                        <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
-                            <div style={{
-                                height: '100%',
-                                width: `${tasks.length > 0 ? Math.round((tasks.filter(t => statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('done') || statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('completed')).length / tasks.length) * 100) : 0}%`,
-                                background: 'linear-gradient(90deg, #4f46e5 0%, #818cf8 100%)',
-                                transition: 'width 0.5s ease-out',
-                                borderRadius: '4px'
-                            }} />
-                        </div>
-
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>
-                                <span style={{ fontWeight: '600', color: '#111827' }}>
-                                    {tasks.filter(t => statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('done') || statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('completed')).length}
-                                </span>/{tasks.length} Completed
-                            </span>
-                            <span>
-                                <span style={{ fontWeight: '600', color: '#ea580c' }}>
-                                    {tasks.filter(t => !statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('done') && !statuses.find(s => s.id === t.status_id)?.label.toLowerCase().includes('completed')).length}
-                                </span> Pending
-                            </span>
-                        </div>
+                    <div style={{ display: 'flex', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '2px' }}>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            style={{
+                                padding: '0.375rem 0.75rem',
+                                background: viewMode === 'list' ? 'var(--bg-tertiary)' : 'transparent',
+                                color: viewMode === 'list' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500'
+                            }}
+                        >
+                            <List size={16} /> List
+                        </button>
+                        <button
+                            onClick={() => setViewMode('board')}
+                            style={{
+                                padding: '0.375rem 0.75rem',
+                                background: viewMode === 'board' ? 'var(--bg-tertiary)' : 'transparent',
+                                color: viewMode === 'board' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500'
+                            }}
+                        >
+                            <LayoutGrid size={16} /> Board
+                        </button>
+                        <button
+                            onClick={() => setViewMode('calendar')}
+                            style={{
+                                padding: '0.375rem 0.75rem',
+                                background: viewMode === 'calendar' ? 'var(--bg-tertiary)' : 'transparent',
+                                color: viewMode === 'calendar' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500'
+                            }}
+                        >
+                            <Calendar size={16} /> Calendar
+                        </button>
+                        <button
+                            onClick={() => setViewMode('chart')}
+                            style={{
+                                padding: '0.375rem 0.75rem',
+                                background: viewMode === 'chart' ? 'var(--bg-tertiary)' : 'transparent',
+                                color: viewMode === 'chart' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500'
+                            }}
+                        >
+                            <BarChart2 size={16} /> Chart
+                        </button>
                     </div>
                 </div>
 
                 {/* Task View */}
-                {viewMode === 'board' ? (
-                    <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                        <KanbanBoard
-                            tasks={boardTasks}
-                            statuses={boardStatuses}
-                            onUpdateTaskStatus={handleStatusChange}
-                            onEdit={(task: any) => handleOpenTaskDetails(task)}
-                            onDelete={(taskId: string) => {
-                                // TODO: Implement Delete
-                                console.log('Delete task', taskId)
-                            }}
-                            onAddStatus={handleCreateStatus}
-                            onReorderStatus={handleReorderStatus}
-                            onDeleteStatus={handleDeleteStatus}
-                        />
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>Loading your tasks...</div>
+                ) : tasks.length === 0 ? (
+                    <div style={{
+                        background: 'var(--bg-secondary)',
+                        padding: '4rem',
+                        borderRadius: '1rem',
+                        border: '1px solid var(--border-color)',
+                        textAlign: 'center'
+                    }}>
+                        <CheckCircle2 size={48} style={{ color: 'var(--text-secondary)', marginBottom: '1rem', opacity: 0.5 }} />
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>All Caught Up!</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>You have no pending tasks assigned to you.</p>
                     </div>
+                ) : viewMode === 'board' ? (
+                    <KanbanBoard
+                        tasks={tasks}
+                        statuses={statuses}
+                        onUpdateTaskStatus={handleUpdateTaskStatus}
+                        onEdit={(task) => {
+                            setSelectedTask(task)
+                            setIsTaskModalOpen(true)
+                        }}
+                        onDelete={() => { }}
+                        onAddStatus={() => { }}
+                        onReorderStatus={() => { }}
+                        onDeleteStatus={() => { }}
+                        groupByLabel={true}
+                    />
                 ) : viewMode === 'calendar' ? (
-                    <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                        <CalendarView
-                            tasks={boardTasks}
-                            statuses={boardStatuses}
-                            onTaskClick={(task: any) => handleOpenTaskDetails(task)}
-                        />
-                    </div>
-                ) : viewMode === 'analytics' ? (
-                    <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                        <AnalyticsView
-                            tasks={boardTasks}
-                            statuses={boardStatuses}
-                        />
-                    </div>
-                ) : viewMode === 'gallery' ? (
-                    <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                        <GalleryView
-                            tasks={boardTasks}
-                            statuses={boardStatuses}
-                            onEdit={(task: any) => handleOpenTaskDetails(task)}
-                            onDelete={(taskId: string) => {
-                                // TODO: Implement Delete
-                                console.log('Delete task', taskId)
-                            }}
-                        />
-                    </div>
+                    <TaskCalendar
+                        tasks={tasks}
+                        statuses={statuses}
+                        onEdit={(task) => {
+                            setSelectedTask(task)
+                            setIsTaskModalOpen(true)
+                        }}
+                    />
+                ) : viewMode === 'chart' ? (
+                    <TaskChart
+                        tasks={tasks}
+                        statuses={statuses}
+                    />
                 ) : (
-                    <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e5e7eb', overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', flexShrink: 0 }}>
-                            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>My Tasks</h3>
-                        </div>
-
-                        {tasks.length === 0 ? (
-                            <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
-                                <CheckCircle2 size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <p>No tasks assigned to you yet.</p>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
-                                {tasks.map(task => (
-                                    <div key={task.id} style={{
-                                        padding: '1.5rem',
-                                        borderBottom: '1px solid #e5e7eb',
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                        {tasks.map(task => {
+                            const status = statuses.find(s => s.id === task.status_id)
+                            return (
+                                <div
+                                    key={task.id}
+                                    onClick={() => {
+                                        setSelectedTask(task)
+                                        setIsTaskModalOpen(true)
+                                    }}
+                                    style={{
+                                        background: 'var(--bg-secondary)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '0.75rem',
+                                        padding: '1.25rem',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s, box-shadow 0.2s',
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        transition: 'background-color 0.2s',
-                                        cursor: 'pointer',
-                                        flexShrink: 0
+                                        alignItems: 'center'
                                     }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                        onClick={() => handleOpenTaskDetails(task)}
-                                    >
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                                <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', margin: 0 }}>{task.title}</h4>
-                                                <span style={{
-                                                    padding: '0.125rem 0.5rem',
-                                                    borderRadius: '9999px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '500',
-                                                    background: task.priority === 'high' ? '#fee2e2' : task.priority === 'medium' ? '#fef3c7' : '#e0e7ff',
-                                                    color: task.priority === 'high' ? '#b91c1c' : task.priority === 'medium' ? '#b45309' : '#4338ca',
-                                                    textTransform: 'capitalize'
-                                                }}>
-                                                    {task.priority}
-                                                </span>
-                                            </div>
-                                            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>{stripHtml(task.description)}</p>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#9ca3af' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <Clock size={14} /> Due: {new Date(task.due_date).toLocaleDateString()}
-                                                </span>
-                                            </div>
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-2px)'
+                                        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0)'
+                                        e.currentTarget.style.boxShadow = 'none'
+                                    }}
+                                >
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>{task.title}</h3>
+                                            <span style={{
+                                                fontSize: '0.75rem',
+                                                padding: '0.25rem 0.625rem',
+                                                borderRadius: '9999px',
+                                                background: status?.color ? `${status.color}20` : 'var(--bg-tertiary)',
+                                                color: status?.color || 'var(--text-secondary)',
+                                                fontWeight: '600',
+                                                border: `1px solid ${status?.color}40`
+                                            }}>
+                                                {status?.label || 'Unknown'}
+                                            </span>
                                         </div>
+                                        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '800px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {task.description ? task.description.replace(/<[^>]*>/g, '') : 'No description'}
+                                        </p>
+                                    </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }} onClick={(e) => e.stopPropagation()}>
-                                            <select
-                                                value={task.status_id || ''}
-                                                onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                                                style={{
-                                                    padding: '0.375rem 2rem 0.375rem 0.75rem',
-                                                    background: '#f3f4f6',
-                                                    borderRadius: '0.375rem',
-                                                    fontSize: '0.875rem',
-                                                    fontWeight: '500',
-                                                    color: '#374151',
-                                                    border: '1px solid transparent',
-                                                    cursor: 'pointer',
-                                                    outline: 'none'
-                                                }}
-                                            >
-                                                <option value="" disabled>Select Status</option>
-                                                {statuses
-                                                    .filter(status => status.department_id === task.department_id)
-                                                    .map(status => (
-                                                        <option key={status.id} value={status.id}>
-                                                            {status.label}
-                                                        </option>
-                                                    ))}
-                                            </select>
-
-
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                                            <Flag size={14} />
+                                            <span style={{ textTransform: 'capitalize' }}>{task.priority || 'Medium'}</span>
+                                        </div>
+                                        {task.due_date && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                                                <Calendar size={14} />
+                                                <span>{new Date(task.due_date).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                                            <User size={14} />
+                                            <span>{task.assignments?.length || 0}</span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </main>
 
             <TaskDetailsModal
-                isOpen={isDetailsModalOpen}
-                onClose={() => setIsDetailsModalOpen(false)}
+                isOpen={isTaskModalOpen}
+                onClose={() => {
+                    setIsTaskModalOpen(false)
+                    setSelectedTask(null)
+                }}
                 task={selectedTask}
                 onUpdate={loadData}
             />
-        </div >
+        </div>
     )
 }

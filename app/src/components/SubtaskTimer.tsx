@@ -77,7 +77,6 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                 .from('subtask_time_logs')
                 .select('*')
                 .eq('task_id', taskId)
-                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
 
             if (error) throw error

@@ -4,6 +4,7 @@ import Modal from './Modal'
 import { Plus, CheckCircle2, Calendar, User, LayoutGrid, List, X } from 'lucide-react'
 import KanbanBoard from './KanbanBoard'
 import RichTextEditor from './RichTextEditor'
+import SubtaskTimer from './SubtaskTimer'
 
 interface DepartmentTasksModalProps {
     isOpen: boolean
@@ -118,7 +119,7 @@ export default function DepartmentTasksModal({
             // 3. Load Time Logs Summary
             if (tasksData && tasksData.length > 0) {
                 const { data: logsData, error: logsError } = await supabase
-                    .from('task_time_logs')
+                    .from('subtask_time_logs')
                     .select('task_id, duration_seconds, end_time, start_time')
                     .in('task_id', tasksData.map(t => t.id))
 
@@ -280,7 +281,8 @@ export default function DepartmentTasksModal({
     const formatDuration = (seconds: number) => {
         const h = Math.floor(seconds / 3600)
         const m = Math.floor((seconds % 3600) / 60)
-        return `${h}h ${m}m`
+        const s = Math.floor(seconds % 60)
+        return `${h}h ${m}m ${s}s`
     }
 
     const toggleAssignee = (employeeId: string) => {
@@ -703,6 +705,16 @@ export default function DepartmentTasksModal({
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Subtask Timer - Show time summary */}
+                                {editingTask && (
+                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                                        <SubtaskTimer
+                                            taskId={editingTask.id}
+                                            subtasksContent={editingTask.subtasks_content || ''}
+                                        />
+                                    </div>
+                                )}
                             </form>
                         </div>
 
