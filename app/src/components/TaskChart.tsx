@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface Task {
     id: string
@@ -12,26 +12,23 @@ interface TaskChartProps {
 }
 
 export default function TaskChart({ tasks, statuses }: TaskChartProps) {
-    // Premium vibrant color palette
-    const COLORS = [
-        '#6366f1', // Indigo
-        '#8b5cf6', // Violet
-        '#ec4899', // Pink
-        '#f43f5e', // Rose
-        '#f97316', // Orange
-        '#eab308', // Yellow
-        '#22c55e', // Green
-        '#06b6d4', // Cyan
-        '#3b82f6', // Blue
-    ]
-
     // Process data for the chart
-    const data = statuses.map((status, index) => {
-        const count = tasks.filter(t => t.status_id === status.id).length
+    // 1. Get unique status labels to avoid duplicates in the chart
+    const uniqueLabels = Array.from(new Set(statuses.map(s => s.label)))
+
+    // 2. Map data for each unique label
+    const data = uniqueLabels.map((label) => {
+        // Find all status IDs that match this label (handling duplicates from different departments)
+        const matchingStatusIds = statuses
+            .filter(s => s.label === label)
+            .map(s => s.id)
+
+        // Count tasks that match any of these status IDs
+        const count = tasks.filter(t => t.status_id && matchingStatusIds.includes(t.status_id)).length
+
         return {
-            name: status.label,
+            name: label,
             count: count,
-            color: COLORS[index % COLORS.length] // Cycle through vibrant colors
         }
     })
 
@@ -48,7 +45,7 @@ export default function TaskChart({ tasks, statuses }: TaskChartProps) {
                 }}>
                     <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-primary)' }}>{label}</p>
                     <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                        Tasks: <span style={{ color: payload[0].payload.color, fontWeight: 'bold' }}>{payload[0].value}</span>
+                        Tasks: <span style={{ color: '#ec4899', fontWeight: 'bold' }}>{payload[0].value}</span>
                     </p>
                 </div>
             )
@@ -84,14 +81,19 @@ export default function TaskChart({ tasks, statuses }: TaskChartProps) {
             <h3 style={{
                 fontSize: '1.1rem',
                 fontWeight: '600',
-                color: 'var(--text-primary)',
                 marginBottom: '1.5rem'
-            }}>
+            }} className="text-gradient">
                 Tasks by Status
             </h3>
 
             <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <defs>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ec4899" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
+                        </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
                     <XAxis
                         dataKey="name"
@@ -108,11 +110,7 @@ export default function TaskChart({ tasks, statuses }: TaskChartProps) {
                         allowDecimals={false}
                     />
                     <Tooltip cursor={{ fill: 'var(--bg-tertiary)', opacity: 0.5 }} content={<CustomTooltip />} />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                        {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Bar>
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60} fill="url(#barGradient)" />
                 </BarChart>
             </ResponsiveContainer>
         </div>

@@ -153,8 +153,8 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
 
     if (todoItems.length === 0) {
         return (
-            <div style={{ padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
                     Add subtasks above to start tracking time
                 </p>
             </div>
@@ -163,13 +163,13 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
 
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Clock size={20} />
                 Subtask Timer
             </h3>
 
             {/* Timer Controls */}
-            <div style={{ padding: '1rem', background: '#f9fafb', borderRadius: '0.5rem', border: '1px solid #e5e7eb', marginBottom: '1rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <select
                         value={selectedSubtask}
@@ -178,12 +178,14 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                         style={{
                             flex: 1,
                             padding: '0.5rem',
-                            border: '1px solid #d1d5db',
+                            border: '1px solid var(--border-color)',
                             borderRadius: '0.375rem',
                             fontSize: '0.875rem',
                             outline: 'none',
                             cursor: activeTimer ? 'not-allowed' : 'pointer',
-                            opacity: activeTimer ? 0.6 : 1
+                            opacity: activeTimer ? 0.6 : 1,
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)'
                         }}
                     >
                         <option value="">Select a subtask...</option>
@@ -198,7 +200,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                             disabled={!selectedSubtask || loading}
                             style={{
                                 padding: '0.5rem 1rem',
-                                background: selectedSubtask ? '#10b981' : '#d1d5db',
+                                background: selectedSubtask ? 'var(--success-color)' : 'var(--bg-secondary)',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '0.375rem',
@@ -219,7 +221,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                             disabled={loading}
                             style={{
                                 padding: '0.5rem 1rem',
-                                background: '#ef4444',
+                                background: 'var(--danger-color)',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '0.375rem',
@@ -240,15 +242,15 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                 {activeTimer && (
                     <div style={{
                         padding: '0.75rem',
-                        background: 'white',
+                        background: 'var(--bg-primary)',
                         borderRadius: '0.375rem',
-                        border: '2px solid #10b981',
+                        border: '2px solid var(--success-color)',
                         textAlign: 'center'
                     }}>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                             Tracking: {activeTimer.subtaskName}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#10b981', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--success-color)', fontFamily: 'monospace' }}>
                             {formatTime(elapsedSeconds)}
                         </div>
                     </div>
@@ -258,7 +260,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
             {/* Time Log Summary */}
             {timeLogs.length > 0 && (
                 <div>
-                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                         Time Summary
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -271,8 +273,8 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                                     key={subtaskName}
                                     style={{
                                         padding: '0.75rem',
-                                        background: 'white',
-                                        border: '1px solid #e5e7eb',
+                                        background: 'var(--bg-primary)',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '0.375rem',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -280,14 +282,14 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                                     }}
                                 >
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>
+                                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-primary)' }}>
                                             {subtaskName}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                             {logCount} session{logCount !== 1 ? 's' : ''}
                                         </div>
                                     </div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#4f46e5', fontFamily: 'monospace' }}>
+                                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--accent-color)', fontFamily: 'monospace' }}>
                                         {formatTime(totalSeconds)}
                                     </div>
                                 </div>

@@ -162,9 +162,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 💬 Comments
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '400' }}>
                     ({comments.length})
                 </span>
             </h3>
@@ -172,7 +172,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
             {/* Comments List */}
             <div style={{ marginBottom: '1rem', maxHeight: '300px', overflowY: 'auto' }}>
                 {comments.length === 0 ? (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', background: '#f9fafb', borderRadius: '0.5rem' }}>
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
                         No comments yet. Be the first to comment!
                     </div>
                 ) : (
@@ -180,9 +180,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         <div key={comment.id} style={{
                             padding: '0.75rem',
                             marginBottom: '0.75rem',
-                            background: '#f9fafb',
+                            background: 'var(--bg-tertiary)',
                             borderRadius: '0.5rem',
-                            border: '1px solid #e5e7eb'
+                            border: '1px solid var(--border-color)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -190,7 +190,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                         width: '28px',
                                         height: '28px',
                                         borderRadius: '50%',
-                                        background: '#4f46e5',
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                                         color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -201,10 +201,10 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                         {comment.user?.full_name?.[0]?.toUpperCase() || comment.user?.email?.[0]?.toUpperCase() || 'U'}
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+                                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                                             {comment.user?.full_name || comment.user?.email || 'Unknown User'}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                             {new Date(comment.created_at).toLocaleString()}
                                             {comment.updated_at !== comment.created_at && ' (edited)'}
                                         </div>
@@ -224,11 +224,11 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                                 padding: '0.25rem',
                                                 background: 'transparent',
                                                 border: 'none',
-                                                color: '#6b7280',
+                                                color: 'var(--text-secondary)',
                                                 cursor: 'pointer',
                                                 borderRadius: '0.25rem'
                                             }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#e5e7eb'}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <Edit2 size={14} />
@@ -246,7 +246,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                                 cursor: 'pointer',
                                                 borderRadius: '0.25rem'
                                             }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <Trash2 size={14} />
@@ -267,13 +267,15 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                         style={{
                                             width: '100%',
                                             padding: '0.5rem',
-                                            border: '1px solid #d1d5db',
+                                            border: '1px solid var(--accent-color)',
                                             borderRadius: '0.375rem',
                                             fontSize: '0.875rem',
                                             resize: 'none',
                                             minHeight: '60px',
                                             outline: 'none',
-                                            fontFamily: 'inherit'
+                                            fontFamily: 'inherit',
+                                            background: 'var(--bg-primary)',
+                                            color: 'var(--text-primary)'
                                         }}
                                         autoFocus
                                         onFocus={(e) => {
@@ -287,7 +289,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                             disabled={!editContent.trim()}
                                             style={{
                                                 padding: '0.375rem 0.75rem',
-                                                background: editContent.trim() ? '#4f46e5' : '#d1d5db',
+                                                background: editContent.trim() ? 'var(--accent-color)' : 'var(--bg-secondary)',
                                                 color: 'white',
                                                 border: 'none',
                                                 borderRadius: '0.375rem',
@@ -305,9 +307,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                             }}
                                             style={{
                                                 padding: '0.375rem 0.75rem',
-                                                background: '#f3f4f6',
-                                                color: '#374151',
-                                                border: 'none',
+                                                background: 'var(--bg-secondary)',
+                                                color: 'var(--text-secondary)',
+                                                border: '1px solid var(--border-color)',
                                                 borderRadius: '0.375rem',
                                                 fontSize: '0.75rem',
                                                 cursor: 'pointer',
@@ -321,7 +323,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                             ) : (
                                 <div style={{
                                     fontSize: '0.875rem',
-                                    color: '#374151',
+                                    color: 'var(--text-primary)',
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word'
                                 }}>
@@ -348,17 +350,19 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         width: '100%',
                         padding: '0.75rem',
                         paddingRight: '3rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid var(--border-color)',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         resize: 'none',
                         minHeight: '44px',
                         maxHeight: '120px',
                         outline: 'none',
-                        transition: 'border-color 0.2s'
+                        transition: 'border-color 0.2s',
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)'
                     }}
-                    onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
-                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--accent-color)'}
+                    onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                 />
                 <button
                     onClick={handleAddComment}
@@ -368,8 +372,8 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                         right: '0.5rem',
                         bottom: '0.5rem',
                         padding: '0.5rem',
-                        background: newComment.trim() ? '#4f46e5' : '#e5e7eb',
-                        color: newComment.trim() ? 'white' : '#9ca3af',
+                        background: newComment.trim() ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                        color: newComment.trim() ? 'white' : 'var(--text-secondary)',
                         border: 'none',
                         borderRadius: '0.375rem',
                         cursor: newComment.trim() ? 'pointer' : 'not-allowed',

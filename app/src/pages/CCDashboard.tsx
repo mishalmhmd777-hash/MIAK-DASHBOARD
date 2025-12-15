@@ -9,10 +9,7 @@ import {
     Building2,
     UserPlus,
     Plus,
-    LogOut,
-    LayoutGrid,
-    ChevronRight,
-    User,
+
     Pencil,
     Trash2,
     ClipboardList,
@@ -26,6 +23,8 @@ import DashboardAnalyticsModal from '../components/DashboardAnalyticsModal'
 import EmployeeAssignmentModal from '../components/EmployeeAssignmentModal'
 import ActivityFeed from '../components/ActivityFeed'
 import NotificationCenter from '../components/NotificationCenter'
+import ClientSidebar from '../components/ClientSidebar'
+import CCProfile from '../components/CCProfile'
 
 
 interface Profile {
@@ -33,6 +32,7 @@ interface Profile {
     email: string
     full_name: string
     role: 'admin' | 'client_coordinator' | 'employee'
+    avatar_url?: string
 }
 
 interface Client {
@@ -76,6 +76,7 @@ export default function CCDashboard() {
     const [departments, setDepartments] = useState<Department[]>([])
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
+    const [viewMode, setViewMode] = useState<'dashboard' | 'profile'>('dashboard')
 
     // Form states
     const [showAddClient, setShowAddClient] = useState(false)
@@ -94,7 +95,7 @@ export default function CCDashboard() {
     // Department-Employee Assignment states
     const [showAssignEmployees, setShowAssignEmployees] = useState(false)
     const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
-    const [, setDepartmentEmployees] = useState<{ [key: string]: Employee[] }>({})
+    const [departmentEmployees, setDepartmentEmployees] = useState<{ [key: string]: Employee[] }>({})
     const [assignedEmployeeIds, setAssignedEmployeeIds] = useState<Set<string>>(new Set())
     const [showDepartmentTasks, setShowDepartmentTasks] = useState(false)
     const [showAnalytics, setShowAnalytics] = useState(false)
@@ -687,6 +688,41 @@ export default function CCDashboard() {
         }
     }
 
+    // Premium Styles
+    const glassCardStyle = {
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--glass-shadow)',
+        borderRadius: 'var(--radius-lg)',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    }
+
+    const glassHeaderStyle = {
+        background: 'var(--bg-primary)', // Solid background for better readability
+        borderBottom: '1px solid var(--border-color)',
+        padding: '1rem 2rem',
+        position: 'sticky' as const,
+        top: 0,
+        zIndex: 40,
+        marginBottom: '2rem'
+    }
+
+    const glassActionButtonStyle = {
+        padding: '0.5rem 1rem',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-sm)',
+        color: 'var(--text-primary)',
+        cursor: 'pointer',
+        fontSize: '0.875rem',
+        fontWeight: '500',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+    }
+
     if (loading) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-secondary)', background: 'var(--bg-primary)' }}>
@@ -715,1022 +751,523 @@ export default function CCDashboard() {
     })
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', fontFamily: 'Inter, sans-serif' }}>
-            {/* Header */}
-            <header style={{
-                background: 'var(--bg-secondary)',
-                borderBottom: '1px solid var(--border-color)',
-                padding: '1rem 2rem',
-                position: 'sticky',
-                top: 0,
-                zIndex: 10,
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    margin: '0 auto',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)',
-                        }}>
-                            <LayoutGrid size={24} />
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
-                                Coordinator Dashboard
-                            </h1>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
-                                {profile?.full_name || user?.email}
-                            </p>
-                        </div>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme === 'dark' ? 'var(--bg-primary)' : 'var(--bg-gradient)', color: 'var(--text-primary)', transition: 'background-color 0.3s' }}>
+
+            <ClientSidebar
+                clients={filteredClients}
+                selectedId={selectedClient}
+                onSelect={(id) => {
+                    setSelectedClient(id)
+                    setViewMode('dashboard')
+                }}
+                onAdd={() => setShowAddClient(true)}
+                onEdit={(c) => { setEditingClient(c); setClientName(c.name); setShowAddClient(true); }}
+                onDelete={handleDeleteClient}
+                profile={profile}
+                onSignOut={handleSignOut}
+                onProfileClick={() => setViewMode('profile')}
+            />
+
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+                {viewMode === 'profile' ? (
+                    <div style={{ padding: '2rem', overflowY: 'auto', height: '100%' }}>
+                        <CCProfile />
                     </div>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <header style={{ ...glassHeaderStyle, background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(12px)', borderBottom: 'var(--glass-border)', padding: '1rem 2rem', marginBottom: 0 }}>
+                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+                                {/* Search */}
+                                <div style={{ flex: 1, maxWidth: '500px', position: 'relative' }}>
+                                    <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search clients, workspaces, employees..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 0.75rem 0.75rem 3rem',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--text-primary)',
+                                            border: 'var(--glass-border)',
+                                            borderRadius: '1rem',
+                                            fontSize: '0.9rem',
+                                            outline: 'none',
+                                            transition: 'all 0.2s',
+                                            backdropFilter: 'blur(4px)'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = 'var(--accent-color)'
+                                            e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.1)'
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = 'rgba(255,255,255,0.5)'
+                                            e.target.style.boxShadow = 'none'
+                                        }}
+                                    />
+                                </div>
 
-                    <div style={{ flex: 1, maxWidth: '400px', margin: '0 2rem' }}>
-                        <div style={{ position: 'relative' }}>
-                            <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.5rem 0.5rem 0.5rem 2.5rem',
-                                    background: 'var(--bg-primary)',
-                                    color: 'var(--text-primary)',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.875rem',
-                                    outline: 'none',
-                                    transition: 'border-color 0.2s',
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = 'var(--accent-color)'}
-                                onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <NotificationCenter />
-                        <button
-                            onClick={toggleTheme}
-                            style={{
-                                padding: '0.5rem',
-                                background: 'var(--bg-secondary)',
-                                color: 'var(--text-secondary)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s',
-                            }}
-                        >
-                            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-                        </button>
-                        <button
-                            onClick={() => setShowAnalytics(true)}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: 'var(--accent-color)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                fontSize: '0.875rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--bg-tertiary)';
-                                e.currentTarget.style.borderColor = 'var(--accent-color)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--bg-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--border-color)';
-                            }}
-                        >
-                            <BarChart3 size={18} />
-                            Analytics
-                        </button>
-                        <button
-
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: 'var(--danger-color)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                fontSize: '0.875rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--bg-tertiary)';
-                                e.currentTarget.style.borderColor = 'var(--danger-color)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--bg-secondary)';
-                                e.currentTarget.style.borderColor = 'var(--border-color)';
-                            }}
-                            onClick={handleSignOut}
-                        >
-                            <LogOut size={18} />
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-                {/* Stats Grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                    gap: '1.5rem',
-                    marginBottom: '2rem',
-                }}>
-                    {[
-                        { label: 'Total Clients', value: clients.length, icon: Users, color: '#4f46e5', bg: '#eef2ff' },
-                        { label: 'Active Workspaces', value: workspaces.length, icon: Briefcase, color: '#0891b2', bg: '#ecfeff' },
-                        { label: 'Departments', value: departments.length, icon: Building2, color: '#ea580c', bg: '#fff7ed' },
-                        { label: 'Total Employees', value: employees.length, icon: UserPlus, color: '#059669', bg: '#ecfdf5' },
-                    ].map((stat, i) => (
-                        <div key={i} style={{
-                            background: 'var(--bg-secondary)',
-                            padding: '1.5rem',
-                            borderRadius: '1rem',
-                            border: '1px solid var(--border-color)',
-                            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '1rem',
-                            transition: 'transform 0.2s',
-                        }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                        >
-                            <div style={{
-                                padding: '1rem',
-                                borderRadius: '0.75rem',
-                                background: theme === 'dark' ? 'var(--bg-tertiary)' : stat.bg,
-                                color: stat.color,
-                            }}>
-                                <stat.icon size={24} />
+                                {/* Right Actions */}
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                    <NotificationCenter />
+                                    <button
+                                        onClick={toggleTheme}
+                                        style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '12px',
+                                            border: 'var(--glass-border)',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--text-secondary)',
+                                            cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAnalytics(true)}
+                                        style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '12px',
+                                            border: 'var(--glass-border)',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--accent-color)',
+                                            cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title="Analytics"
+                                    >
+                                        <BarChart3 size={20} />
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: '500' }}>{stat.label}</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>{stat.value}</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '2rem', alignItems: 'start' }}>
-
-                    {/* Left Column: Hierarchy Management */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                        {/* Clients Section */}
-                        <div style={{ background: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                            <div style={{
-                                padding: '1rem 1.5rem',
-                                borderBottom: '1px solid var(--border-color)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                background: 'var(--bg-primary)',
-                            }}>
-                                <h2 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Users size={18} /> Clients
-                                </h2>
-                                <button
-                                    onClick={() => setShowAddClient(true)}
-                                    style={{
-                                        padding: '0.375rem 0.75rem',
-                                        background: '#4f46e5',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.375rem',
-                                        fontSize: '0.875rem',
-                                        fontWeight: '500',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem',
-                                    }}
-                                >
-                                    <Plus size={16} /> Add
-                                </button>
-                            </div>
-                            <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
-                                {filteredClients.length === 0 ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                        {searchTerm ? 'No clients match your search.' : 'No clients found. Add one to get started.'}
-                                    </div>
-                                ) : (
-                                    filteredClients.map((client) => (
-                                        <div
-                                            key={client.id}
-                                            onClick={() => setSelectedClient(client.id)}
-                                            style={{
-                                                padding: '0.75rem 1rem',
-                                                borderRadius: '0.5rem',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                background: selectedClient === client.id ? 'var(--bg-tertiary)' : 'transparent',
-                                                color: selectedClient === client.id ? 'var(--accent-color)' : 'var(--text-primary)',
-                                                fontWeight: selectedClient === client.id ? '600' : '400',
-                                                transition: 'all 0.2s',
-                                            }}
+                        <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                                {/* Stats Grid */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                                    gap: '1.5rem',
+                                    marginBottom: '2rem',
+                                }}>
+                                    {[
+                                        { label: 'Total Clients', value: clients.length, icon: Users, color: '#4f46e5', bg: '#eef2ff' },
+                                        { label: 'Active Workspaces', value: workspaces.length, icon: Briefcase, color: '#0891b2', bg: '#ecfeff' },
+                                        { label: 'Departments', value: departments.length, icon: Building2, color: '#ea580c', bg: '#fff7ed' },
+                                        { label: 'Total Employees', value: employees.length, icon: UserPlus, color: '#059669', bg: '#ecfdf5' },
+                                    ].map((stat, i) => (
+                                        <div key={i} style={{
+                                            ...glassCardStyle,
+                                            padding: '1.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '1rem',
+                                            borderRadius: '1.2rem',
+                                            transition: 'transform 0.2s',
+                                        }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                         >
-                                            <span>{client.name}</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                {selectedClient === client.id && <ChevronRight size={16} />}
-                                                <div style={{ display: 'flex', gap: '0.25rem' }} onClick={(e) => e.stopPropagation()}>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingClient(client)
-                                                            setClientName(client.name)
-                                                            setShowAddClient(true)
-                                                        }}
-                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                        title="Edit"
-                                                    >
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteClient(client.id)}
-                                                        style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
+                                            <div style={{
+                                                padding: '1rem',
+                                                borderRadius: '1rem',
+                                                background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : stat.bg,
+                                                color: stat.color,
+                                            }}>
+                                                <stat.icon size={24} />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: '600' }} className="text-gradient">{stat.label}</div>
+                                                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)' }}>{stat.value}</div>
                                             </div>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Workspaces Section */}
-                        {selectedClient && (
-                            <div style={{ background: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
-                                <div style={{
-                                    padding: '1rem 1.5rem',
-                                    borderBottom: '1px solid var(--border-color)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    background: 'var(--bg-primary)',
-                                }}>
-                                    <h2 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Briefcase size={18} /> Workspaces
-                                    </h2>
-                                    <button
-                                        onClick={() => setShowAddWorkspace(true)}
-                                        style={{
-                                            padding: '0.375rem 0.75rem',
-                                            background: '#0891b2',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '0.375rem',
-                                            fontSize: '0.875rem',
-                                            fontWeight: '500',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.25rem',
-                                        }}
-                                    >
-                                        <Plus size={16} /> Add
-                                    </button>
+                                    ))}
                                 </div>
-                                <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
-                                    {filteredWorkspaces.length === 0 ? (
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                            {searchTerm ? 'No workspaces match your search.' : 'No workspaces found.'}
-                                        </div>
-                                    ) : (
-                                        filteredWorkspaces.map((ws) => (
-                                            <div
-                                                key={ws.id}
-                                                onClick={() => setSelectedWorkspace(ws.id)}
-                                                style={{
-                                                    padding: '0.75rem 1rem',
-                                                    borderRadius: '0.5rem',
-                                                    cursor: 'pointer',
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '2rem', alignItems: 'start' }}>
+                                    {/* Left Column: Workspaces & Employees */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {/* Workspaces Section Moved Here */}
+                                        {selectedClient ? (
+                                            <div style={{ ...glassCardStyle, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
+                                                <div style={{
+                                                    padding: '1.25rem',
+                                                    borderBottom: 'var(--glass-border)',
                                                     display: 'flex',
-                                                    alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    background: selectedWorkspace === ws.id ? 'var(--bg-tertiary)' : 'transparent',
-                                                    color: selectedWorkspace === ws.id ? '#0891b2' : 'var(--text-primary)',
-                                                    fontWeight: selectedWorkspace === ws.id ? '600' : '400',
-                                                    transition: 'all 0.2s',
-                                                }}
-                                            >
-                                                <span>{ws.name}</span>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    {selectedWorkspace === ws.id && <ChevronRight size={16} />}
-                                                    <div style={{ display: 'flex', gap: '0.25rem' }} onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingWorkspace(ws)
-                                                                setWorkspaceName(ws.name)
-                                                                setShowAddWorkspace(true)
-                                                            }}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                            title="Edit"
-                                                        >
-                                                            <Pencil size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteWorkspace(ws.id)}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Departments Section */}
-                        {selectedWorkspace && (
-                            <div style={{ background: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
-                                <div style={{
-                                    padding: '1rem 1.5rem',
-                                    borderBottom: '1px solid var(--border-color)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    background: 'var(--bg-primary)',
-                                }}>
-                                    <h2 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Building2 size={18} /> Departments
-                                    </h2>
-                                    <button
-                                        onClick={() => setShowAddDepartment(true)}
-                                        style={{
-                                            padding: '0.375rem 0.75rem',
-                                            background: '#ea580c',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '0.375rem',
-                                            fontSize: '0.875rem',
-                                            fontWeight: '500',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.25rem',
-                                        }}
-                                    >
-                                        <Plus size={16} /> Add
-                                    </button>
-                                </div>
-                                <div style={{ padding: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
-                                    {filteredDepartments.length === 0 ? (
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                            {searchTerm ? 'No departments match your search.' : 'No departments in this workspace.'}
-                                        </div>
-                                    ) : (
-                                        filteredDepartments.map((dept) => (
-                                            <div
-                                                key={dept.id}
-                                                style={{
-                                                    padding: '0.75rem 1rem',
-                                                    borderRadius: '0.5rem',
-                                                    display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    background: 'transparent',
-                                                    color: 'var(--text-primary)',
-                                                    transition: 'all 0.2s',
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <span>{dept.name}</span>
-                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingDepartment(dept)
-                                                                setDepartmentName(dept.name)
-                                                                setShowAddDepartment(true)
-                                                            }}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                            title="Edit"
-                                                        >
-                                                            <Pencil size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteDepartment(dept.id)}
-                                                            style={{ padding: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button
-                                                        onClick={() => handleOpenAssignEmployees(dept.id)}
-                                                        style={{
-                                                            padding: '0.25rem 0.5rem',
-                                                            background: 'var(--bg-tertiary)',
-                                                            color: 'var(--text-primary)',
-                                                            border: 'none',
-                                                            borderRadius: '0.25rem',
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.25rem',
-                                                        }}
-                                                    >
-                                                        <UserPlus size={14} /> Assign
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedDepartment(dept.id)
-                                                            setShowDepartmentTasks(true)
-                                                        }}
-                                                        style={{
-                                                            padding: '0.25rem 0.5rem',
-                                                            background: 'var(--bg-tertiary)',
-                                                            color: 'var(--accent-color)',
-                                                            border: 'none',
-                                                            borderRadius: '0.25rem',
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.25rem',
-                                                        }}
-                                                    >
-                                                        <ClipboardList size={14} /> Tasks
+                                                    background: 'var(--bg-primary)',
+                                                }}>
+                                                    <h2 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="text-gradient">
+                                                        <Briefcase size={18} style={{ color: 'var(--accent-color)' }} /> Workspaces
+                                                    </h2>
+                                                    <button onClick={() => setShowAddWorkspace(true)} style={glassActionButtonStyle}>
+                                                        <Plus size={16} /> Add
                                                     </button>
                                                 </div>
+                                                <div style={{ padding: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
+                                                    {filteredWorkspaces.length === 0 ? (
+                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No workspaces found in this client.</div>
+                                                    ) : (
+                                                        filteredWorkspaces.map((ws) => (
+                                                            <div key={ws.id} style={{ marginBottom: '0.5rem' }}>
+                                                                <div
+                                                                    onClick={() => setSelectedWorkspace(ws.id)}
+                                                                    style={{
+                                                                        padding: '1rem',
+                                                                        borderRadius: '0.8rem',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'space-between',
+                                                                        background: selectedWorkspace === ws.id ? 'linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(6, 182, 212, 0.1))' : 'transparent',
+                                                                        border: selectedWorkspace === ws.id ? '1px solid rgba(8, 145, 178, 0.2)' : '1px solid transparent',
+                                                                        color: selectedWorkspace === ws.id ? '#0891b2' : 'var(--text-primary)',
+                                                                        fontWeight: selectedWorkspace === ws.id ? '600' : '500',
+                                                                        transition: 'all 0.2s',
+                                                                    }}
+                                                                >
+                                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{ws.name}</span>
+                                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                        <button onClick={(e) => { e.stopPropagation(); setEditingWorkspace(ws); setWorkspaceName(ws.name); setShowAddWorkspace(true); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}><Pencil size={14} /></button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws.id); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)' }}><Trash2 size={14} /></button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Departments Section Nested */}
+                                                                {selectedWorkspace === ws.id && (
+                                                                    <div style={{ ...glassCardStyle, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out', marginTop: '0.5rem', marginLeft: '0.5rem', borderLeft: '2px solid rgba(8, 145, 178, 0.2)' }}>
+                                                                        <div style={{
+                                                                            padding: '1rem',
+                                                                            borderBottom: 'var(--glass-border)',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center',
+                                                                            background: 'var(--bg-primary)',
+                                                                        }}>
+                                                                            <h2 style={{ fontSize: '1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="text-gradient">
+                                                                                <Building2 size={16} style={{ color: 'var(--accent-color)' }} /> Departments
+                                                                            </h2>
+                                                                            <button onClick={() => setShowAddDepartment(true)} style={glassActionButtonStyle}>
+                                                                                <Plus size={14} /> Add
+                                                                            </button>
+                                                                        </div>
+                                                                        <div style={{ padding: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
+                                                                            {filteredDepartments.length === 0 ? (
+                                                                                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No departments.</div>
+                                                                            ) : (
+                                                                                filteredDepartments.map((dept) => (
+                                                                                    <div
+                                                                                        key={dept.id}
+                                                                                        style={{
+                                                                                            padding: '0.75rem',
+                                                                                            borderRadius: '0.6rem',
+                                                                                            background: 'var(--bg-primary)',
+                                                                                            marginBottom: '0.5rem',
+                                                                                            border: 'var(--glass-border)',
+                                                                                        }}
+                                                                                    >
+                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.9rem' }}>{dept.name}</span>
+                                                                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                                                <button onClick={(e) => { e.stopPropagation(); setEditingDepartment(dept); setDepartmentName(dept.name); setShowAddDepartment(true); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}><Pencil size={12} /></button>
+                                                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteDepartment(dept.id); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)' }}><Trash2 size={12} /></button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                                                            <button onClick={() => handleOpenAssignEmployees(dept.id)} style={{ ...glassActionButtonStyle, fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}><UserPlus size={12} /> Assign</button>
+                                                                                            <button onClick={() => { setSelectedDepartment(dept.id); loadDepartmentEmployees(dept.id); setShowDepartmentTasks(true); }} style={{ ...glassActionButtonStyle, fontSize: '0.75rem', padding: '0.3rem 0.6rem', color: 'var(--accent-color)' }}><ClipboardList size={12} /> Tasks</button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                                        ) : (
+                                            <div style={{ ...glassCardStyle, padding: '3rem', textAlign: 'center', border: '2px dashed var(--glass-border)' }}>
+                                                <Briefcase size={48} style={{ margin: '0 auto 1rem', color: 'var(--text-secondary)', opacity: 0.5 }} />
+                                                <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }} className="text-gradient">No Client Selected</h3>
+                                                <p style={{ color: 'var(--text-secondary)' }}>Select a client from the sidebar to view workspaces.</p>
+                                            </div>
+                                        )}
 
-                    {/* Right Column: Employees */}
-                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                        <div style={{
-                            padding: '1.5rem',
-                            borderBottom: '1px solid var(--border-color)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'var(--bg-primary)',
-                        }}>
-                            <div>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                                    Employees
-                                </h2>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
-                                    Manage your team members and roles
-                                </p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-                                    style={{
-                                        padding: '0.625rem 1rem',
-                                        borderRadius: '0.5rem',
-                                        border: '1px solid var(--border-color)',
-                                        fontSize: '0.875rem',
-                                        color: 'var(--text-primary)',
-                                        outline: 'none',
-                                        cursor: 'pointer',
-                                        background: 'var(--bg-secondary)',
-                                    }}
-                                >
-                                    <option value="all">All Status</option>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                                <button
-                                    onClick={() => setShowAddEmployee(true)}
-                                    style={{
-                                        padding: '0.625rem 1.25rem',
-                                        background: '#059669',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.5rem',
-                                        cursor: 'pointer',
-                                        fontWeight: '600',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)',
-                                    }}
-                                >
-                                    <UserPlus size={18} /> Add Employee
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: '0' }}>
-                            {filteredEmployees.length === 0 ? (
-                                <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                                    <div style={{
-                                        width: '64px', height: '64px', background: 'var(--bg-tertiary)', borderRadius: '50%',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
-                                        color: 'var(--text-secondary)'
-                                    }}>
-                                        <UserPlus size={32} />
-                                    </div>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No employees yet</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                        Start by adding employees to your organization.
-                                    </p>
-                                </div>
-                            ) : (
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead style={{ background: 'var(--bg-primary)' }}>
-                                        <tr>
-                                            <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</th>
-                                            <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
-                                            <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Joined</th>
-                                            <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                                            <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredEmployees.map((emp) => (
-                                            <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <div style={{
-                                                            width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-tertiary)', color: 'var(--accent-color)',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.875rem'
-                                                        }}>
-                                                            {emp.full_name?.[0]?.toUpperCase() || emp.email[0].toUpperCase()}
-                                                        </div>
-                                                        <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{emp.full_name || 'N/A'}</span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{emp.email}</td>
-                                                <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                                    {new Date(emp.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                                        {/* Employees Table Moved Here */}
+                                        <div style={{ ...glassCardStyle, overflow: 'hidden' }}>
+                                            <div style={{
+                                                padding: '1.5rem',
+                                                borderBottom: 'var(--glass-border)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                background: 'var(--bg-primary)',
+                                            }}>
+                                                <div>
+                                                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.25rem' }} className="text-gradient">
+                                                        Employees
+                                                    </h2>
+                                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+                                                        Manage your team members
+                                                    </p>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                                     <select
-                                                        value={emp.status || 'active'}
-                                                        onChange={(e) => handleStatusChange(emp.id, e.target.value as 'active' | 'inactive')}
+                                                        value={statusFilter}
+                                                        onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
                                                         style={{
-                                                            padding: '0.25rem 0.5rem',
-                                                            borderRadius: '9999px',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: '500',
-                                                            border: 'none',
-                                                            background: emp.status === 'inactive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                                            color: emp.status === 'inactive' ? '#ef4444' : '#059669',
-                                                            cursor: 'pointer',
+                                                            padding: '0.5rem 1rem',
+                                                            borderRadius: '0.5rem',
+                                                            border: 'var(--glass-border)',
+                                                            fontSize: '0.875rem',
+                                                            color: 'var(--text-primary)',
                                                             outline: 'none',
+                                                            cursor: 'pointer',
+                                                            background: 'var(--bg-secondary)',
                                                         }}
                                                     >
+                                                        <option value="all">All Status</option>
                                                         <option value="active">Active</option>
                                                         <option value="inactive">Inactive</option>
                                                     </select>
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingEmployee(emp)
-                                                                setEmpFullName(emp.full_name)
-                                                                setEmpEmail(emp.email)
-                                                                setEmpPassword('') // Don't show password
-                                                                setShowAddEmployee(true)
-                                                            }}
-                                                            style={{
-                                                                padding: '0.25rem',
-                                                                background: 'transparent',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                color: 'var(--text-secondary)',
-                                                                transition: 'color 0.2s',
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                                                            title="Edit"
-                                                        >
-                                                            <Pencil size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteEmployee(emp.id)}
-                                                            style={{
-                                                                padding: '0.25rem',
-                                                                background: 'transparent',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                color: 'var(--text-secondary)',
-                                                                transition: 'color 0.2s',
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger-color)'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                    <button
+                                                        onClick={() => setShowAddEmployee(true)}
+                                                        style={{
+                                                            ...glassActionButtonStyle,
+                                                            background: 'linear-gradient(135deg, #059669, #10b981)',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            boxShadow: '0 4px 6px rgba(5, 150, 105, 0.2)'
+                                                        }}
+                                                    >
+                                                        <UserPlus size={18} /> Add Employee
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: '0', overflowX: 'auto' }}>
+                                                {filteredEmployees.length === 0 ? (
+                                                    <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                                                        <div style={{
+                                                            width: '64px', height: '64px', background: 'var(--bg-tertiary)', borderRadius: '50%',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
+                                                            color: 'var(--text-secondary)'
+                                                        }}>
+                                                            <UserPlus size={32} />
+                                                        </div>
+                                                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No employees yet</h3>
+                                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                                                            Start by adding employees to your organization.
+                                                        </p>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    </div>
-                    {/* Activity Feed Column */}
-                    <div style={{ height: 'calc(100vh - 140px)', position: 'sticky', top: '100px' }}>
-                        <ActivityFeed />
-                    </div>
-                </div>
-            </main>
+                                                ) : (
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                        <thead style={{ background: 'var(--bg-tertiary)' }}>
+                                                            <tr>
+                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</th>
+                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
+                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {filteredEmployees.map((emp) => (
+                                                                <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                                            <div style={{
+                                                                                width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white',
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.9rem'
+                                                                            }}>
+                                                                                {emp.full_name?.[0]?.toUpperCase() || emp.email[0].toUpperCase()}
+                                                                            </div>
+                                                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{emp.full_name || 'N/A'}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{emp.email}</td>
+                                                                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                                                                        <select
+                                                                            value={emp.status || 'active'}
+                                                                            onChange={(e) => handleStatusChange(emp.id, e.target.value as 'active' | 'inactive')}
+                                                                            style={{
+                                                                                padding: '0.25rem 0.75rem',
+                                                                                borderRadius: '2rem',
+                                                                                fontSize: '0.75rem',
+                                                                                fontWeight: '600',
+                                                                                border: 'none',
+                                                                                background: emp.status === 'inactive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                                                                color: emp.status === 'inactive' ? '#ef4444' : '#059669',
+                                                                                cursor: 'pointer',
+                                                                                outline: 'none',
+                                                                            }}
+                                                                        >
+                                                                            <option value="active">Active</option>
+                                                                            <option value="inactive">Inactive</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                                            <button onClick={() => { setEditingEmployee(emp); setEmpFullName(emp.full_name); setEmpEmail(emp.email); setEmpPassword(''); setShowAddEmployee(true); }} style={{ padding: '0.4rem', borderRadius: '0.4rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s' }}>
+                                                                                <Pencil size={16} />
+                                                                            </button>
+                                                                            <button onClick={() => handleDeleteEmployee(emp.id)} style={{ padding: '0.4rem', borderRadius: '0.4rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)', transition: 'all 0.2s' }}>
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
 
-            {/* Modals */}
-            <Modal
-                isOpen={showAddClient}
-                onClose={() => {
-                    setShowAddClient(false)
-                    setEditingClient(null)
-                    setClientName('')
-                }}
-                title={editingClient ? "Edit Client" : "Add New Client"}
-            >
-                <form onSubmit={handleSaveClient}>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                            Client Name
-                        </label>
-                        <input
-                            type="text"
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            placeholder="e.g. Acme Corp"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '0.625rem',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.95rem',
-                                outline: 'none',
-                                transition: 'border-color 0.2s',
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
-                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                    {/* Right Column: Activity Feed */}
+                                    <div style={{ height: 'calc(100vh - 140px)', position: 'sticky', top: '0' }}>
+                                        <div style={{ ...glassCardStyle, height: '100%', overflow: 'hidden', padding: '1.5rem' }}>
+                                            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }} className="text-gradient">Activity Feed</h3>
+                                            <div style={{ height: 'calc(100% - 40px)', overflowY: 'auto' }}>
+                                                <ActivityFeed />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </main>
+
+                        {/* Error Message Toast/Banner */}
+                        {error && (
+                            <div style={{
+                                position: 'fixed', bottom: '2rem', right: '2rem',
+                                background: '#fef2f2', color: '#b91c1c', border: '1px solid #fca5a5',
+                                padding: '1rem', borderRadius: '0.5rem', zIndex: 100,
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                            }}>
+                                <strong>Error:</strong> {error}
+                                <button onClick={() => setError(null)} style={{ marginLeft: '1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
+                            </div>
+                        )}
+
+                        {/* Modals outside main flex flow to prevent clipping if any issues, though they are fixed position usually */}
+
+                        {/* Modals are fixed position so they can be anywhere, but keep them at root of flex container or here */}
+                        <Modal
+                            isOpen={showAddClient}
+                            onClose={() => { setShowAddClient(false); setEditingClient(null); setClientName(''); }}
+                            title={editingClient ? "Edit Client" : "Add New Client"}
+                        >
+                            <form onSubmit={handleSaveClient}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Client Name</label>
+                                    <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Acme Corp" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                    <button type="button" onClick={() => setShowAddClient(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingClient ? 'Update' : 'Create'}</button>
+                                </div>
+                            </form>
+                        </Modal>
+
+                        <Modal
+                            isOpen={showAddWorkspace}
+                            onClose={() => { setShowAddWorkspace(false); setEditingWorkspace(null); setWorkspaceName(''); }}
+                            title={editingWorkspace ? "Edit Workspace" : "Add New Workspace"}
+                        >
+                            <form onSubmit={handleSaveWorkspace}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Workspace Name</label>
+                                    <input type="text" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="e.g. Marketing" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                    <button type="button" onClick={() => setShowAddWorkspace(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#0891b2', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingWorkspace ? 'Update' : 'Create'}</button>
+                                </div>
+                            </form>
+                        </Modal>
+
+                        <Modal
+                            isOpen={showAddDepartment}
+                            onClose={() => { setShowAddDepartment(false); setEditingDepartment(null); setDepartmentName(''); }}
+                            title={editingDepartment ? "Edit Department" : "Add New Department"}
+                        >
+                            <form onSubmit={handleSaveDepartment}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Department Name</label>
+                                    <input type="text" value={departmentName} onChange={(e) => setDepartmentName(e.target.value)} placeholder="e.g. Design" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                    <button type="button" onClick={() => setShowAddDepartment(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#ea580c', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingDepartment ? 'Update' : 'Create'}</button>
+                                </div>
+                            </form>
+                        </Modal>
+
+                        <Modal
+                            isOpen={showAddEmployee}
+                            onClose={() => { setShowAddEmployee(false); setEditingEmployee(null); setEmpFullName(''); setEmpEmail(''); setEmpPassword(''); }}
+                            title={editingEmployee ? "Edit Employee" : "Add New Employee"}
+                        >
+                            <form onSubmit={handleAddEmployee}>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Full Name</label>
+                                    <input type="text" value={empFullName} onChange={(e) => setEmpFullName(e.target.value)} placeholder="e.g. John Doe" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                </div>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Email</label>
+                                    <input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} placeholder="john@example.com" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                </div>
+                                {!editingEmployee && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Password</label>
+                                        <input type="password" value={empPassword} onChange={(e) => setEmpPassword(e.target.value)} placeholder="Min 6 chars" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                    <button type="button" onClick={() => setShowAddEmployee(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#059669', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingEmployee ? 'Update' : 'Create'}</button>
+                                </div>
+                            </form>
+                        </Modal>
+
+                        <DepartmentTasksModal
+                            isOpen={showDepartmentTasks}
+                            onClose={() => setShowDepartmentTasks(false)}
+                            departmentId={selectedDepartment}
+                            departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
+                            employees={selectedDepartment ? (departmentEmployees[selectedDepartment] || []) : []}
                         />
-                    </div>
-                    {error && <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowAddClient(false)}
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: '#374151',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: '#4f46e5',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            {editingClient ? 'Update Client' : 'Create Client'}
-                        </button>
-                    </div>
-                </form>
-            </Modal>
 
-            <Modal
-                isOpen={showAddWorkspace}
-                onClose={() => {
-                    setShowAddWorkspace(false)
-                    setEditingWorkspace(null)
-                    setWorkspaceName('')
-                }}
-                title={editingWorkspace ? "Edit Workspace" : "Add New Workspace"}
-            >
-                <form onSubmit={handleSaveWorkspace}>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                            Workspace Name
-                        </label>
-                        <input
-                            type="text"
-                            value={workspaceName}
-                            onChange={(e) => setWorkspaceName(e.target.value)}
-                            placeholder="e.g. Marketing Projects"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '0.625rem',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.95rem',
-                                outline: 'none',
-                            }}
+                        <EmployeeAssignmentModal
+                            isOpen={showAssignEmployees}
+                            onClose={() => setShowAssignEmployees(false)}
+                            departmentId={selectedDepartment || ''}
+                            departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
+                            allEmployees={employees}
+                            assignedEmployeeIds={assignedEmployeeIds}
+                            onToggleAssignment={handleToggleEmployeeAssignment}
                         />
-                    </div>
-                    {error && <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowAddWorkspace(false)}
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: '#374151',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: '#0891b2',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            {editingWorkspace ? 'Update Workspace' : 'Create Workspace'}
-                        </button>
-                    </div>
-                </form>
-            </Modal>
 
-            <Modal
-                isOpen={showAddDepartment}
-                onClose={() => {
-                    setShowAddDepartment(false)
-                    setEditingDepartment(null)
-                    setDepartmentName('')
-                }}
-                title={editingDepartment ? "Edit Department" : "Add New Department"}
-            >
-                <form onSubmit={handleSaveDepartment}>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                            Department Name
-                        </label>
-                        <input
-                            type="text"
-                            value={departmentName}
-                            onChange={(e) => setDepartmentName(e.target.value)}
-                            placeholder="e.g. Design Team"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '0.625rem',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.95rem',
-                                outline: 'none',
-                            }}
+                        <DashboardAnalyticsModal
+                            isOpen={showAnalytics}
+                            onClose={() => setShowAnalytics(false)}
+                            ccId={user?.id}
                         />
-                    </div>
-                    {error && <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowAddDepartment(false)}
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: '#374151',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: '#ea580c',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            {editingDepartment ? 'Update Department' : 'Create Department'}
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-
-            <Modal
-                isOpen={showAddEmployee}
-                onClose={() => {
-                    setShowAddEmployee(false)
-                    setEditingEmployee(null)
-                    setEmpFullName('')
-                    setEmpEmail('')
-                    setEmpPassword('')
-                }}
-                title={editingEmployee ? "Edit Employee" : "Add New Employee"}
-            >
-                <form onSubmit={handleAddEmployee}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                            Full Name
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                            <User size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                            <input
-                                type="text"
-                                value={empFullName}
-                                onChange={(e) => setEmpFullName(e.target.value)}
-                                placeholder="John Doe"
-                                required
-                                style={{
-                                    width: '100%',
-                                    padding: '0.625rem 0.625rem 0.625rem 2.5rem',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.95rem',
-                                    outline: 'none',
-                                }}
-                            />
-                        </div>
-                    </div>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            value={empEmail}
-                            onChange={(e) => setEmpEmail(e.target.value)}
-                            placeholder="john@example.com"
-                            required
-                            disabled={!!editingEmployee}
-                            style={{
-                                width: '100%',
-                                padding: '0.625rem',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                fontSize: '0.95rem',
-                                outline: 'none',
-                                background: editingEmployee ? '#f3f4f6' : 'white',
-                            }}
-                        />
-                    </div>
-                    {!editingEmployee && (
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '500', fontSize: '0.875rem' }}>
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                value={empPassword}
-                                onChange={(e) => setEmpPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                minLength={6}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.625rem',
-                                    border: '1px solid var(--border-color)',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.95rem',
-                                    outline: 'none',
-                                }}
-                            />
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Must be at least 6 characters</p>
-                        </div>
-                    )}
-                    {error && <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowAddEmployee(false)
-                                setEditingEmployee(null)
-                            }}
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: 'var(--bg-secondary)',
-                                color: '#374151',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '0.625rem 1rem',
-                                background: '#059669',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.5rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                            }}
-                        >
-                            {editingEmployee ? 'Update Employee' : 'Create Employee'}
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-
-            <EmployeeAssignmentModal
-                isOpen={showAssignEmployees}
-                onClose={() => setShowAssignEmployees(false)}
-                departmentId={selectedDepartment}
-                departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
-                allEmployees={employees}
-                assignedEmployeeIds={assignedEmployeeIds}
-                onToggleAssignment={handleToggleEmployeeAssignment}
-            />
-
-            <DepartmentTasksModal
-                isOpen={showDepartmentTasks}
-                onClose={() => setShowDepartmentTasks(false)}
-                departmentId={selectedDepartment}
-                departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
-                employees={employees}
-            />
-
-            <DashboardAnalyticsModal
-                isOpen={showAnalytics}
-                onClose={() => setShowAnalytics(false)}
-                ccId={user?.id}
-            />
-
-            <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+                    </>
+                )}
+            </div>
         </div >
     )
 }

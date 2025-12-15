@@ -30,47 +30,57 @@ export default function Login() {
             alignItems: 'center',
             justifyContent: 'center',
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #0f172a 0%, #3b0764 50%, #be185d 100%)', // Navy -> Deep Purple -> Pink
             padding: '1rem',
+            fontFamily: "'Inter', sans-serif",
         }}>
             <div style={{
-                background: 'white',
-                padding: '2.5rem',
+                background: 'rgba(255, 255, 255, 0.03)', // Glass effect
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                padding: '3rem',
                 borderRadius: '1.5rem',
-                boxShadow: '0 25px 80px rgba(0,0,0,0.25)',
+                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 width: '100%',
                 maxWidth: '450px',
-                animation: 'slideIn 0.3s ease-out',
+                animation: 'slideIn 0.4s ease-out',
             }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
-                        width: '70px',
-                        height: '70px',
-                        margin: '0 auto 1rem',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        borderRadius: '1rem',
+                        width: '80px',
+                        height: '80px',
+                        margin: '0 auto 1.5rem',
+                        background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', // Pink to Purple
+                        borderRadius: '1.25rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '2rem',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                        fontSize: '2.5rem',
+                        boxShadow: '0 10px 25px rgba(236, 72, 153, 0.3)',
                     }}>
                         🏢
                     </div>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#1f2937', fontWeight: '700' }}>
+                    <h1 style={{
+                        fontSize: '2.25rem',
+                        marginBottom: '0.75rem',
+                        color: '#f0f9ff', // Very light blue/white
+                        fontWeight: '700',
+                        letterSpacing: '-0.025em'
+                    }}>
                         Welcome Back
                     </h1>
-                    <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '1rem' }}>
                         Sign in to your workspace dashboard
                     </p>
                 </div>
 
                 <form onSubmit={handleLogin}>
-                    <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{
                             display: 'block',
                             marginBottom: '0.5rem',
-                            color: '#374151',
+                            color: '#e2e8f0', // Light grey-blue
                             fontWeight: '500',
                             fontSize: '0.95rem',
                         }}>
@@ -84,23 +94,31 @@ export default function Login() {
                             placeholder="you@example.com"
                             style={{
                                 width: '100%',
-                                padding: '0.875rem 1rem',
-                                border: '2px solid #e5e7eb',
+                                padding: '1rem 1.25rem',
+                                background: 'rgba(15, 23, 42, 0.6)', // Dark semi-transparent
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
                                 borderRadius: '0.75rem',
                                 fontSize: '1rem',
+                                color: '#fff',
                                 transition: 'all 0.2s',
                                 outline: 'none',
                             }}
-                            onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
-                            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = '#38bdf8'
+                                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(56, 189, 248, 0.2)'
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                                e.currentTarget.style.boxShadow = 'none'
+                            }}
                         />
                     </div>
 
-                    <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ marginBottom: '2rem' }}>
                         <label style={{
                             display: 'block',
                             marginBottom: '0.5rem',
-                            color: '#374151',
+                            color: '#e2e8f0',
                             fontWeight: '500',
                             fontSize: '0.95rem',
                         }}>
@@ -114,26 +132,34 @@ export default function Login() {
                             placeholder="Enter your password"
                             style={{
                                 width: '100%',
-                                padding: '0.875rem 1rem',
-                                border: '2px solid #e5e7eb',
+                                padding: '1rem 1.25rem',
+                                background: 'rgba(15, 23, 42, 0.6)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
                                 borderRadius: '0.75rem',
                                 fontSize: '1rem',
+                                color: '#fff',
                                 transition: 'all 0.2s',
                                 outline: 'none',
                             }}
-                            onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
-                            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = '#38bdf8'
+                                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(56, 189, 248, 0.2)'
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                                e.currentTarget.style.boxShadow = 'none'
+                            }}
                         />
                     </div>
 
                     {error && (
                         <div style={{
                             padding: '1rem',
-                            marginBottom: '1.25rem',
-                            background: '#fef2f2',
-                            color: '#dc2626',
+                            marginBottom: '1.5rem',
+                            background: 'rgba(220, 38, 38, 0.1)',
+                            color: '#fca5a5',
                             borderRadius: '0.75rem',
-                            border: '1px solid #fecaca',
+                            border: '1px solid rgba(220, 38, 38, 0.2)',
                             fontSize: '0.95rem',
                         }}>
                             {error}
@@ -147,22 +173,28 @@ export default function Login() {
                             width: '100%',
                             padding: '1rem',
                             background: loading
-                                ? '#9ca3af'
-                                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                ? '#475569'
+                                : 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', // Pink to Purple
                             color: 'white',
                             border: 'none',
                             borderRadius: '0.75rem',
                             fontSize: '1.05rem',
                             fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s',
-                            boxShadow: loading ? 'none' : '0 4px 15px rgba(102, 126, 234, 0.4)',
+                            transition: 'all 0.3s',
+                            boxShadow: loading ? 'none' : '0 4px 20px rgba(236, 72, 153, 0.4)',
                         }}
                         onMouseEnter={(e) => {
-                            if (!loading) e.currentTarget.style.transform = 'translateY(-2px)'
+                            if (!loading) {
+                                e.currentTarget.style.transform = 'translateY(-2px)'
+                                e.currentTarget.style.boxShadow = '0 8px 25px rgba(236, 72, 153, 0.5)'
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            if (!loading) e.currentTarget.style.transform = 'translateY(0)'
+                            if (!loading) {
+                                e.currentTarget.style.transform = 'translateY(0)'
+                                e.currentTarget.style.boxShadow = '0 4px 20px rgba(236, 72, 153, 0.4)'
+                            }
                         }}
                     >
                         {loading ? 'Signing in...' : 'Sign In'}
@@ -170,22 +202,23 @@ export default function Login() {
                 </form>
 
                 <div style={{
-                    marginTop: '1.5rem',
+                    marginTop: '2rem',
                     textAlign: 'center',
                     paddingTop: '1.5rem',
-                    borderTop: '1px solid #e5e7eb',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                 }}>
-                    <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>
                         Need to create an admin account?{' '}
                         <a
                             href="/admin-register"
                             style={{
-                                color: '#667eea',
+                                color: '#ec4899',
                                 textDecoration: 'none',
                                 fontWeight: '600',
+                                transition: 'color 0.2s',
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#f472b6'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#ec4899'}
                         >
                             Register here
                         </a>

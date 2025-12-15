@@ -43,7 +43,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: isFullscreen ? 'white' : 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: isFullscreen ? 'var(--bg-primary)' : 'rgba(0, 0, 0, 0.5)',
                 display: 'flex',
                 alignItems: isFullscreen ? 'flex-start' : 'center',
                 justifyContent: 'center',
@@ -59,18 +59,19 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
             <div
                 ref={modalRef}
                 style={{
-                    background: 'white',
+                    background: 'var(--bg-secondary)',
                     borderRadius: isFullscreen ? 0 : '1rem',
                     width: '100%',
                     maxWidth: isFullscreen ? '100%' : (isDocument ? '900px' : maxWidth),
                     height: isFullscreen ? '100vh' : 'auto',
                     margin: isFullscreen ? 0 : '1rem',
-                    boxShadow: isFullscreen ? 'none' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    boxShadow: isFullscreen ? 'none' : 'var(--glass-shadow)',
                     animation: 'slideUp 0.3s ease-out',
                     display: 'flex',
                     flexDirection: 'column',
                     maxHeight: isFullscreen ? '100vh' : '90vh',
-                    color: '#1f2937',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)',
                     ...((isDocument && !isFullscreen) ? { height: '85vh' } : {})
                 }}
             >
@@ -78,13 +79,13 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
                     <div
                         style={{
                             padding: '1.5rem',
-                            borderBottom: '1px solid #e5e7eb',
+                            borderBottom: '1px solid var(--border-color)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                         }}
                     >
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', margin: 0 }}>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                             {title}
                         </h2>
                         <button
@@ -93,7 +94,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
                                 background: 'none',
                                 border: 'none',
                                 cursor: 'pointer',
-                                color: '#6b7280',
+                                color: 'var(--text-secondary)',
                                 padding: '0.5rem',
                                 borderRadius: '0.375rem',
                                 display: 'flex',
@@ -101,7 +102,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
                                 justifyContent: 'center',
                                 transition: 'background-color 0.2s',
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
                             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
                             <X size={20} />

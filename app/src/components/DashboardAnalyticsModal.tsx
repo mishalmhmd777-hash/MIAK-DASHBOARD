@@ -99,14 +99,14 @@ export default function DashboardAnalyticsModal({
         return (
             <div style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#374151', fontWeight: '500' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontWeight: '500' }}>
                         <Icon size={16} style={{ color }} />
                         <span>{label}</span>
                     </div>
-                    <span style={{ color: '#6b7280' }}>{value} ({percentage}%)</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{value} ({percentage}%)</span>
                 </div>
-                <div style={{ width: '100%', height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${percentage}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 0.5s ease-out' }} />
+                <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${percentage}%`, height: '100%', background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', borderRadius: '4px', transition: 'width 0.5s ease-out' }} />
                 </div>
             </div>
         )
@@ -120,44 +120,44 @@ export default function DashboardAnalyticsModal({
 
                 {/* Task Analytics */}
                 <div style={{
-                    background: '#f9fafb',
+                    background: 'var(--bg-secondary)',
                     borderRadius: '1rem',
                     padding: '1.5rem',
-                    border: '1px solid #e5e7eb'
+                    border: '1px solid var(--border-color)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <BarChart3 size={20} />
                             Task Overview
                         </h3>
-                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                            Total Tasks: <span style={{ fontWeight: '600', color: '#111827' }}>{taskStats.total}</span>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                            Total Tasks: <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{taskStats.total}</span>
                         </div>
                     </div>
 
                     {loading ? (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Loading task statistics...</div>
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading task statistics...</div>
                     ) : (
                         <div>
                             <ProgressBar
                                 label="To Do"
                                 value={taskStats.todo}
                                 total={taskStats.total}
-                                color="#6b7280"
+                                color="var(--text-secondary)"
                                 icon={Circle}
                             />
                             <ProgressBar
                                 label="In Progress"
                                 value={taskStats.inProgress}
                                 total={taskStats.total}
-                                color="#f59e0b"
+                                color="var(--warning-color)"
                                 icon={Clock}
                             />
                             <ProgressBar
                                 label="Done"
                                 value={taskStats.done}
                                 total={taskStats.total}
-                                color="#10b981"
+                                color="var(--success-color)"
                                 icon={CheckCircle2}
                             />
                         </div>

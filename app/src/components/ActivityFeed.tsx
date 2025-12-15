@@ -66,6 +66,26 @@ export default function ActivityFeed() {
         }
     }
 
+    const clearAllActivities = async () => {
+        if (activities.length === 0) return
+        if (!confirm('Are you sure you want to clear all visible activities?')) return
+
+        try {
+            const idsToDelete = activities.map(a => a.id)
+            const { error } = await supabase
+                .from('activities')
+                .delete()
+                .in('id', idsToDelete)
+
+            if (error) throw error
+
+            setActivities([])
+        } catch (error) {
+            console.error('Error clearing activities:', error)
+            alert('Failed to clear activities')
+        }
+    }
+
     if (loading) {
         return <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Loading activity...</div>
     }
@@ -84,10 +104,41 @@ export default function ActivityFeed() {
                 padding: '1rem 1.5rem',
                 borderBottom: '1px solid var(--border-color)',
                 background: 'var(--bg-primary)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
             }}>
                 <h2 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                     <Clock size={18} /> Activity Feed
                 </h2>
+                {activities.length > 0 && (
+                    <button
+                        onClick={clearAllActivities}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--danger-color)'
+                            e.currentTarget.style.background = 'rgba(255, 0, 0, 0.1)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--text-secondary)'
+                            e.currentTarget.style.background = 'transparent'
+                        }}
+                    >
+                        Clear All
+                    </button>
+                )}
             </div>
             <div style={{ padding: '0.5rem', overflowY: 'auto', flex: 1 }}>
                 {activities.length === 0 ? (

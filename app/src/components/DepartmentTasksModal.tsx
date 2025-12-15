@@ -388,7 +388,7 @@ export default function DepartmentTasksModal({
                 {/* Left Panel: Task List */}
                 <div style={{
                     width: showCreateForm || editingTask ? '40%' : '100%',
-                    borderRight: showCreateForm || editingTask ? '1px solid #e5e7eb' : 'none',
+                    borderRight: showCreateForm || editingTask ? '1px solid var(--border-color)' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s ease'
@@ -396,31 +396,31 @@ export default function DepartmentTasksModal({
                     {/* Toolbar */}
                     <div style={{
                         padding: '1rem',
-                        borderBottom: '1px solid #e5e7eb',
+                        borderBottom: '1px solid var(--border-color)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        background: '#f9fafb'
+                        background: 'var(--bg-secondary)'
                     }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                                <span style={{ fontWeight: '600', color: '#111827' }}>{tasks.length}</span> Tasks
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{tasks.length}</span> Tasks
                             </div>
-                            <div style={{ height: '16px', width: '1px', background: '#d1d5db' }}></div>
-                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                                <span style={{ fontWeight: '600', color: '#111827' }}>
+                            <div style={{ height: '16px', width: '1px', background: 'var(--border-color)' }}></div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
                                     {formatDuration(timeLogs.reduce((acc, curr) => acc + curr.total_seconds, 0))}
                                 </span> Logged
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', background: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '2px' }}>
+                            <div style={{ display: 'flex', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '2px' }}>
                                 <button
                                     onClick={() => setViewMode('list')}
                                     style={{
                                         padding: '0.25rem 0.5rem',
-                                        background: viewMode === 'list' ? '#f3f4f6' : 'transparent',
-                                        color: viewMode === 'list' ? '#4f46e5' : '#6b7280',
+                                        background: viewMode === 'list' ? 'var(--bg-primary)' : 'transparent',
+                                        color: viewMode === 'list' ? 'var(--accent-color)' : 'var(--text-secondary)',
                                         border: 'none',
                                         borderRadius: '0.375rem',
                                         cursor: 'pointer',
@@ -437,8 +437,8 @@ export default function DepartmentTasksModal({
                                     onClick={() => setViewMode('board')}
                                     style={{
                                         padding: '0.25rem 0.5rem',
-                                        background: viewMode === 'board' ? '#f3f4f6' : 'transparent',
-                                        color: viewMode === 'board' ? '#4f46e5' : '#6b7280',
+                                        background: viewMode === 'board' ? 'var(--bg-primary)' : 'transparent',
+                                        color: viewMode === 'board' ? 'var(--accent-color)' : 'var(--text-secondary)',
                                         border: 'none',
                                         borderRadius: '0.375rem',
                                         cursor: 'pointer',
@@ -464,7 +464,7 @@ export default function DepartmentTasksModal({
                                 }}
                                 style={{
                                     padding: '0.375rem 0.75rem',
-                                    background: '#4f46e5',
+                                    background: 'var(--accent-color)',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '0.5rem',
@@ -482,11 +482,11 @@ export default function DepartmentTasksModal({
                     </div>
 
                     {/* Content Area */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', background: '#f3f4f6' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', background: 'var(--bg-primary)' }}>
                         {loading ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>Loading tasks...</div>
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading tasks...</div>
                         ) : tasks.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
+                            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                                 <CheckCircle2 size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
                                 <p>No tasks found.</p>
                             </div>
@@ -514,52 +514,52 @@ export default function DepartmentTasksModal({
                                             onClick={() => handleEditTask(task)}
                                             style={{
                                                 padding: '1rem',
-                                                border: isSelected ? '1px solid #4f46e5' : '1px solid #e5e7eb',
+                                                border: isSelected ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
                                                 borderRadius: '0.5rem',
-                                                background: isSelected ? '#eef2ff' : 'white',
+                                                background: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-secondary)',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                boxShadow: 'var(--glass-shadow)'
                                             }}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: '#111827' }}>{task.title}</h4>
+                                                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>{task.title}</h4>
                                                 <span style={{
                                                     fontSize: '0.7rem',
                                                     padding: '0.125rem 0.5rem',
                                                     borderRadius: '9999px',
-                                                    background: status?.color || '#f3f4f6',
-                                                    color: '#374151',
+                                                    background: status?.color || 'var(--bg-tertiary)',
+                                                    color: '#374151', // Keep status text dark for contrast on colored badges
                                                     fontWeight: '500'
                                                 }}>
                                                     {status?.label}
                                                 </span>
                                             </div>
-                                            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', color: '#6b7280', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                 {stripHtml(task.description || '')}
                                             </p>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                         <User size={12} />
                                                         {task.assignments && task.assignments.length > 0 ? task.assignments.length : '0'}
                                                     </div>
                                                     {task.due_date && (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                             <Calendar size={12} /> {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4f46e5' }}>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-color)' }}>
                                                     {formatDuration(timeLogged)}
                                                 </div>
                                             </div>
                                             {task.subtasks_content && calculateProgress(task.subtasks_content) > 0 && (
                                                 <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                    <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: '#4f46e5', transition: 'width 0.3s' }} />
+                                                    <div style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.3s' }} />
                                                     </div>
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#4f46e5', minWidth: '35px' }}>
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--accent-color)', minWidth: '35px' }}>
                                                         {calculateProgress(task.subtasks_content)}%
                                                     </span>
                                                 </div>
@@ -574,14 +574,14 @@ export default function DepartmentTasksModal({
 
                 {/* Right Panel: Form */}
                 {(showCreateForm || editingTask) && (
-                    <div style={{ width: '60%', display: 'flex', flexDirection: 'column', background: 'white', animation: 'slideIn 0.2s ease-out' }}>
-                        <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>
+                    <div style={{ width: '60%', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', animation: 'slideIn 0.2s ease-out' }}>
+                        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                                 {editingTask ? 'Edit Task' : 'Create New Task'}
                             </h3>
                             <button
                                 onClick={() => { setShowCreateForm(false); setEditingTask(null); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                             >
                                 <X size={20} />
                             </button>
@@ -590,20 +590,28 @@ export default function DepartmentTasksModal({
                         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                             <form id="task-form" onSubmit={handleCreateTask}>
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>Task Title</label>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Task Title</label>
                                     <input
                                         type="text"
                                         value={title}
                                         onChange={e => setTitle(e.target.value)}
                                         required
                                         placeholder="What needs to be done?"
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', fontSize: '1rem' }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            borderRadius: '0.5rem',
+                                            border: '1px solid var(--border-color)',
+                                            fontSize: '1rem',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--text-primary)'
+                                        }}
                                     />
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>Priority</label>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Priority</label>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             {['low', 'medium', 'high'].map(p => (
                                                 <button
@@ -614,9 +622,9 @@ export default function DepartmentTasksModal({
                                                         flex: 1,
                                                         padding: '0.5rem',
                                                         borderRadius: '0.375rem',
-                                                        border: `1px solid ${priority === p ? (p === 'high' ? '#fca5a5' : p === 'medium' ? '#fcd34d' : '#a5b4fc') : '#e5e7eb'}`,
-                                                        background: priority === p ? (p === 'high' ? '#fef2f2' : p === 'medium' ? '#fffbeb' : '#eef2ff') : 'white',
-                                                        color: priority === p ? (p === 'high' ? '#b91c1c' : p === 'medium' ? '#b45309' : '#4338ca') : '#6b7280',
+                                                        border: `1px solid ${priority === p ? (p === 'high' ? '#fca5a5' : p === 'medium' ? '#fcd34d' : '#a5b4fc') : 'var(--border-color)'}`,
+                                                        background: priority === p ? (p === 'high' ? 'rgba(254, 242, 242, 0.1)' : p === 'medium' ? 'rgba(255, 251, 235, 0.1)' : 'rgba(238, 242, 255, 0.1)') : 'var(--bg-tertiary)',
+                                                        color: priority === p ? (p === 'high' ? '#f87171' : p === 'medium' ? '#fbbf24' : '#818cf8') : 'var(--text-secondary)',
                                                         fontWeight: '500',
                                                         textTransform: 'capitalize',
                                                         cursor: 'pointer'
@@ -628,38 +636,45 @@ export default function DepartmentTasksModal({
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>Due Date</label>
+                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Due Date</label>
                                         <input
                                             type="date"
                                             value={dueDate}
                                             onChange={e => setDueDate(e.target.value)}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '0.5rem', border: '1px solid #d1d5db' }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.6rem',
+                                                borderRadius: '0.5rem',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'var(--bg-tertiary)',
+                                                color: 'var(--text-primary)'
+                                            }}
                                         />
                                     </div>
                                 </div>
 
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>Description</label>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Description</label>
                                     <RichTextEditor
                                         value={description}
                                         onChange={setDescription}
                                         placeholder="Add details..."
-                                        style={{ height: '200px', marginBottom: '3rem' }}
+                                        style={{ height: '200px', marginBottom: '3rem', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
                                     />
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>Assignees</label>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Assignees</label>
                                     <div style={{
                                         maxHeight: '200px',
                                         overflowY: 'auto',
-                                        border: '1px solid #d1d5db',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '0.5rem',
-                                        background: '#f9fafb',
+                                        background: 'var(--bg-tertiary)',
                                         padding: '0.5rem'
                                     }}>
                                         {employees.length === 0 ? (
-                                            <div style={{ fontSize: '0.875rem', color: '#9ca3af', textAlign: 'center', padding: '1rem' }}>No employees found</div>
+                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>No employees found</div>
                                         ) : (
                                             employees.map(emp => (
                                                 <label
@@ -671,7 +686,7 @@ export default function DepartmentTasksModal({
                                                         padding: '0.5rem',
                                                         borderRadius: '0.375rem',
                                                         cursor: 'pointer',
-                                                        background: assignedTo.includes(emp.id) ? '#eef2ff' : 'transparent',
+                                                        background: assignedTo.includes(emp.id) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                                                         transition: 'background 0.2s'
                                                     }}
                                                 >
@@ -679,15 +694,15 @@ export default function DepartmentTasksModal({
                                                         type="checkbox"
                                                         checked={assignedTo.includes(emp.id)}
                                                         onChange={() => toggleAssignee(emp.id)}
-                                                        style={{ width: '16px', height: '16px', accentColor: '#4f46e5' }}
+                                                        style={{ width: '16px', height: '16px', accentColor: 'var(--accent-color)' }}
                                                     />
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                         <div style={{
                                                             width: '24px',
                                                             height: '24px',
                                                             borderRadius: '50%',
-                                                            background: '#e0e7ff',
-                                                            color: '#4f46e5',
+                                                            background: 'var(--bg-primary)',
+                                                            color: 'var(--accent-color)',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
@@ -696,7 +711,7 @@ export default function DepartmentTasksModal({
                                                         }}>
                                                             {(emp.full_name || emp.email).charAt(0).toUpperCase()}
                                                         </div>
-                                                        <span style={{ fontSize: '0.875rem', color: '#374151', fontWeight: assignedTo.includes(emp.id) ? '500' : '400' }}>
+                                                        <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: assignedTo.includes(emp.id) ? '500' : '400' }}>
                                                             {emp.full_name || emp.email}
                                                         </span>
                                                     </div>
@@ -708,7 +723,7 @@ export default function DepartmentTasksModal({
 
                                 {/* Subtask Timer - Show time summary */}
                                 {editingTask && (
-                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
                                         <SubtaskTimer
                                             taskId={editingTask.id}
                                             subtasksContent={editingTask.subtasks_content || ''}
@@ -718,12 +733,12 @@ export default function DepartmentTasksModal({
                             </form>
                         </div>
 
-                        <div style={{ padding: '1rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: '#f9fafb' }}>
+                        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '1rem', background: 'var(--bg-secondary)' }}>
                             {editingTask && (
                                 <button
                                     type="button"
                                     onClick={() => handleDeleteTask(editingTask.id)}
-                                    style={{ padding: '0.625rem 1.25rem', background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer' }}
+                                    style={{ padding: '0.625rem 1.25rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer' }}
                                 >
                                     Delete Task
                                 </button>
@@ -731,7 +746,7 @@ export default function DepartmentTasksModal({
                             <button
                                 type="submit"
                                 form="task-form"
-                                style={{ padding: '0.625rem 1.5rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 1px 2px rgba(79, 70, 229, 0.2)' }}
+                                style={{ padding: '0.625rem 1.5rem', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
                             >
                                 {editingTask ? 'Save Changes' : 'Create Task'}
                             </button>

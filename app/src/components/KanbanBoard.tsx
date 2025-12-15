@@ -142,11 +142,12 @@ export default function KanbanBoard({
                                                 flex: '1 0 300px',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                background: '#f9fafb',
+                                                background: 'var(--bg-secondary)',
                                                 borderRadius: '1rem',
                                                 padding: '1.25rem',
                                                 height: '100%',
-                                                maxHeight: '100%'
+                                                maxHeight: '100%',
+                                                border: '1px solid var(--border-color)'
                                             }}
                                         >
                                             <div
@@ -160,8 +161,8 @@ export default function KanbanBoard({
                                                     borderRadius: '50%',
                                                     background: status.color || '#e5e7eb'
                                                 }} />
-                                                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#374151', margin: 0 }}>{status.label}</h3>
-                                                <span style={{ marginLeft: 'auto', background: 'white', padding: '0.25rem 0.625rem', borderRadius: '1rem', fontSize: '0.75rem', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+                                                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{status.label}</h3>
+                                                <span style={{ marginLeft: 'auto', background: 'var(--bg-primary)', padding: '0.25rem 0.625rem', borderRadius: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>
                                                     {getTasksByStatus(groupByLabel && status.id !== 'unassigned' ? status.label : status.id).length}
                                                 </span>
                                                 <button
@@ -203,17 +204,17 @@ export default function KanbanBoard({
                                                                         {...provided.dragHandleProps}
                                                                         onClick={() => onEdit(task)}
                                                                         style={{
-                                                                            background: 'white',
+                                                                            background: 'var(--bg-primary)',
                                                                             padding: '1rem',
                                                                             borderRadius: '0.5rem',
-                                                                            border: '1px solid #e5e7eb',
+                                                                            border: '1px solid var(--border-color)',
                                                                             boxShadow: snapshot.isDragging ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                                                                             cursor: 'pointer',
                                                                             ...provided.draggableProps.style
                                                                         }}
                                                                     >
-                                                                        <div style={{ fontSize: '0.95rem', fontWeight: '500', color: '#111827', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                                            <span>{task.title}</span>
+                                                                        <div style={{ fontSize: '0.95rem', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                            <span className="text-gradient">{task.title}</span>
                                                                             <div style={{ display: 'flex', gap: '0.25rem' }}>
                                                                                 <button
                                                                                     onClick={(e) => { e.stopPropagation(); onEdit(task) }}
@@ -230,7 +231,7 @@ export default function KanbanBoard({
                                                                             </div>
                                                                         </div>
                                                                         {task.description && (
-                                                                            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                                                 {stripHtml(task.description)}
                                                                             </div>
                                                                         )}
@@ -242,14 +243,14 @@ export default function KanbanBoard({
                                                                                             width: '20px',
                                                                                             height: '20px',
                                                                                             borderRadius: '50%',
-                                                                                            background: '#e5e7eb',
+                                                                                            background: 'var(--bg-tertiary)',
                                                                                             display: 'flex',
                                                                                             alignItems: 'center',
                                                                                             justifyContent: 'center',
                                                                                             fontSize: '0.625rem',
                                                                                             fontWeight: '600',
-                                                                                            color: '#4b5563',
-                                                                                            border: '1px solid white',
+                                                                                            color: 'var(--text-secondary)',
+                                                                                            border: '1px solid var(--bg-primary)',
                                                                                             marginLeft: i > 0 ? '-8px' : '0'
                                                                                         }} title={assignment.user.full_name || assignment.user.email}>
                                                                                             {(assignment.user.full_name || assignment.user.email).charAt(0).toUpperCase()}
@@ -283,18 +284,18 @@ export default function KanbanBoard({
                         {/* Add Status Button */}
                         <div style={{ flex: '0 0 300px' }}>
                             {isAddingStatus ? (
-                                <form onSubmit={handleAddStatusSubmit} style={{ background: '#f9fafb', padding: '1rem', borderRadius: '0.75rem' }}>
+                                <form onSubmit={handleAddStatusSubmit} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
                                     <input
                                         autoFocus
                                         type="text"
                                         value={newStatusLabel}
                                         onChange={(e) => setNewStatusLabel(e.target.value)}
                                         placeholder="Status Name"
-                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', marginBottom: '0.5rem' }}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', marginBottom: '0.5rem', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                                     />
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button type="submit" style={{ flex: 1, padding: '0.375rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>Add</button>
-                                        <button type="button" onClick={() => setIsAddingStatus(false)} style={{ flex: 1, padding: '0.375rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer' }}>Cancel</button>
+                                        <button type="submit" style={{ flex: 1, padding: '0.375rem', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>Add</button>
+                                        <button type="button" onClick={() => setIsAddingStatus(false)} style={{ flex: 1, padding: '0.375rem', background: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: 'pointer' }}>Cancel</button>
                                     </div>
                                 </form>
                             ) : (
@@ -304,9 +305,9 @@ export default function KanbanBoard({
                                         width: '100%',
                                         padding: '1rem',
                                         background: 'transparent',
-                                        border: '2px dashed #e5e7eb',
+                                        border: '2px dashed var(--border-color)',
                                         borderRadius: '0.75rem',
-                                        color: '#6b7280',
+                                        color: 'var(--text-secondary)',
                                         fontWeight: '500',
                                         cursor: 'pointer',
                                         display: 'flex',

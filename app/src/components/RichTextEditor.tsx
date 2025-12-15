@@ -15,7 +15,7 @@ import {
     Heading1, Heading2, Heading3, List, ListOrdered,
     CheckSquare, Quote, Type, Table as TableIcon,
     Trash2, ArrowDown, ArrowRight, PanelLeft, PanelTop,
-    Image as ImageIcon, Link as LinkIcon, Edit
+    Link as LinkIcon, Edit
 } from 'lucide-react'
 
 interface RichTextEditorProps {
@@ -178,17 +178,17 @@ const SlashCommandMenu = ({ editor, position, onClose }: { editor: any, position
                 top: position.top,
                 left: position.left,
                 zIndex: 9999,
-                background: 'white',
+                background: 'var(--bg-secondary)',
                 borderRadius: '0.5rem',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                border: '1px solid #e5e7eb',
+                boxShadow: 'var(--glass-shadow)',
+                border: '1px solid var(--border-color)',
                 width: '300px',
                 maxHeight: '320px',
                 overflowY: 'auto',
                 padding: '0.5rem'
             }}
         >
-            <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Basic Blocks
             </div>
             {items.map((item, index) => (
@@ -203,7 +203,7 @@ const SlashCommandMenu = ({ editor, position, onClose }: { editor: any, position
                         padding: '0.5rem',
                         borderRadius: '0.25rem',
                         cursor: 'pointer',
-                        background: index === selectedIndex ? '#f3f4f6' : 'transparent',
+                        background: index === selectedIndex ? 'var(--bg-tertiary)' : 'transparent',
                         transition: 'background 0.1s'
                     }}
                 >
@@ -211,18 +211,18 @@ const SlashCommandMenu = ({ editor, position, onClose }: { editor: any, position
                         width: '40px',
                         height: '40px',
                         borderRadius: '0.25rem',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--border-color)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'white',
-                        color: '#374151'
+                        background: 'var(--bg-primary)',
+                        color: 'var(--text-primary)'
                     }}>
                         {item.icon}
                     </div>
                     <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{item.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{item.description}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.description}</div>
                     </div>
                 </div>
             ))}
@@ -236,18 +236,18 @@ const MenuButton = ({ onClick, icon: Icon, title, active = false }: any) => (
         onClick={onClick}
         title={title}
         style={{
-            background: active ? '#e5e7eb' : 'transparent',
+            background: active ? 'var(--bg-tertiary)' : 'transparent',
             border: 'none',
             borderRadius: '0.25rem',
             padding: '0.25rem',
             cursor: 'pointer',
-            color: '#374151',
+            color: 'var(--text-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-        onMouseLeave={(e) => e.currentTarget.style.background = active ? '#e5e7eb' : 'transparent'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = active ? 'var(--bg-tertiary)' : 'transparent'}
     >
         <Icon size={16} />
     </button>
@@ -356,10 +356,10 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                         display: 'flex',
                         gap: '0.25rem',
                         padding: '0.5rem',
-                        background: 'white',
-                        border: '1px solid #e5e7eb',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
                         borderRadius: '0.5rem',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        boxShadow: 'var(--glass-shadow)'
                     }}>
                         <MenuButton
                             onClick={() => editor.chain().focus().addColumnBefore().run()}
@@ -376,7 +376,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                             icon={Trash2}
                             title="Delete Column"
                         />
-                        <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.25rem' }} />
+                        <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 0.25rem' }} />
                         <MenuButton
                             onClick={() => editor.chain().focus().addRowBefore().run()}
                             icon={PanelTop}
@@ -392,7 +392,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                             icon={Trash2}
                             title="Delete Row"
                         />
-                        <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.25rem' }} />
+                        <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 0.25rem' }} />
                         <MenuButton
                             onClick={() => editor.chain().focus().deleteTable().run()}
                             icon={Trash2}
@@ -413,10 +413,10 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                         display: 'flex',
                         gap: '0.25rem',
                         padding: '0.5rem',
-                        background: 'white',
-                        border: '1px solid #e5e7eb',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
                         borderRadius: '0.5rem',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        boxShadow: 'var(--glass-shadow)'
                     }}>
                         <MenuButton
                             onClick={() => {
@@ -428,7 +428,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                             icon={Edit}
                             title="Edit Image"
                         />
-                        <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.25rem' }} />
+                        <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 0.25rem' }} />
                         <MenuButton
                             onClick={() => editor.chain().focus().deleteSelection().run()}
                             icon={Trash2}
@@ -458,22 +458,22 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                     outline: none;
                     font-size: 0.95rem;
                     line-height: 1.6;
-                    color: #374151;
+                    color: var(--text-primary);
                 }
                 .ProseMirror p.is-editor-empty:first-child::before {
-                    color: #9ca3af;
+                    color: var(--text-secondary);
                     content: attr(data-placeholder);
                     float: left;
                     height: 0;
                     pointer-events: none;
                 }
                 /* Typography */
-                .ProseMirror h1 { font-size: 1.8rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; line-height: 1.2; }
-                .ProseMirror h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; }
-                .ProseMirror h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
-                .ProseMirror ul, .ProseMirror ol { padding-left: 1.5rem; }
-                .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding-left: 1rem; color: #6b7280; font-style: italic; }
-                .ProseMirror a { color: #3b82f6; text-decoration: underline; cursor: pointer; }
+                .ProseMirror h1 { font-size: 1.8rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; line-height: 1.2; color: var(--text-primary); }
+                .ProseMirror h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+                .ProseMirror h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+                .ProseMirror ul, .ProseMirror ol { padding-left: 1.5rem; color: var(--text-primary); }
+                .ProseMirror blockquote { border-left: 3px solid var(--border-color); padding-left: 1rem; color: var(--text-secondary); font-style: italic; }
+                .ProseMirror a { color: var(--accent-color); text-decoration: underline; cursor: pointer; }
                 .ProseMirror img { max-width: 100%; height: auto; border-radius: 0.5rem; }
                 
                 /* Task List */
@@ -502,7 +502,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                 }
                 ul[data-type="taskList"] li[data-checked="true"] > div {
                     text-decoration: line-through;
-                    color: #9ca3af;
+                    color: var(--text-secondary);
                 }
                 ul[data-type="taskList"] input[type="checkbox"] {
                     cursor: pointer;
@@ -520,7 +520,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                 }
                 .ProseMirror td, .ProseMirror th {
                     min-width: 1em;
-                    border: 2px solid #e5e7eb;
+                    border: 2px solid var(--border-color);
                     padding: 3px 5px;
                     vertical-align: top;
                     box-sizing: border-box;
@@ -529,7 +529,7 @@ export default function RichTextEditor({ value, onChange, placeholder, readOnly 
                 .ProseMirror th {
                     font-weight: bold;
                     text-align: left;
-                    background-color: #f9fafb;
+                    background-color: var(--bg-tertiary);
                 }
                 .ProseMirror .selectedCell:after {
                     z-index: 2;

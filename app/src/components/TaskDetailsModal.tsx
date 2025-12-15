@@ -135,7 +135,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             style={{
                                 fontSize: '2.5rem',
                                 fontWeight: '700',
-                                color: '#111827',
+                                color: 'var(--text-primary)',
                                 border: 'none',
                                 outline: 'none',
                                 width: '100%',
@@ -149,7 +149,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     {/* Task Properties */}
                     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem 1rem', alignItems: 'center', fontSize: '0.9rem', marginBottom: '2rem' }}>
                         {/* Status */}
-                        <div style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Layout size={16} /> Status
                         </div>
                         <div>
@@ -157,12 +157,12 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                                 value={task.status_id || ''}
                                 onChange={(e) => handleUpdateStatus(e.target.value)}
                                 style={{
-                                    background: '#e5e7eb',
-                                    color: '#374151',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
                                     padding: '0.125rem 0.5rem',
                                     borderRadius: '0.25rem',
                                     fontSize: '0.85rem',
-                                    border: 'none',
+                                    border: '1px solid var(--border-color)',
                                     cursor: 'pointer',
                                     outline: 'none'
                                 }}
@@ -176,40 +176,41 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             </select>
                         </div>
                         {/* Priority */}
-                        <div style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Flag size={16} /> Priority
                         </div>
                         <div>
                             <span style={{
-                                background: task.priority === 'high' ? '#fee2e2' : task.priority === 'medium' ? '#fef3c7' : '#e0e7ff',
-                                color: task.priority === 'high' ? '#b91c1c' : task.priority === 'medium' ? '#b45309' : '#4338ca',
+                                background: task.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' : task.priority === 'medium' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                                color: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#6366f1',
                                 padding: '0.125rem 0.5rem',
                                 borderRadius: '0.25rem',
                                 fontSize: '0.85rem',
-                                textTransform: 'capitalize'
+                                textTransform: 'capitalize',
+                                border: `1px solid ${task.priority === 'high' ? 'rgba(239, 68, 68, 0.3)' : task.priority === 'medium' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
                             }}>
                                 {task.priority || 'Medium'}
                             </span>
                         </div>
                         {/* Assignee */}
-                        <div style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <User size={16} /> Assignee
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {task.task_assignments?.map((assignment: any) => (
+                            {task.assignments?.map((assignment: any) => (
                                 <div key={assignment.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '600' }}>
+                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
                                         {(assignment.user?.full_name || assignment.user?.email || '?').charAt(0).toUpperCase()}
                                     </div>
-                                    <span style={{ color: '#374151' }}>{assignment.user?.full_name || 'Unknown'}</span>
+                                    <span style={{ color: 'var(--text-primary)' }}>{assignment.user?.full_name || 'Unknown'}</span>
                                 </div>
                             ))}
                         </div>
                         {/* Due Date */}
-                        <div style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Clock size={16} /> Due Date
                         </div>
-                        <div style={{ color: '#374151' }}>
+                        <div style={{ color: 'var(--text-primary)' }}>
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
                         </div>
                     </div>
