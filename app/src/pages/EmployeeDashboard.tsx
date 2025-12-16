@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { LayoutGrid, List, LogOut, Moon, Sun, CheckCircle2, User, Calendar, Flag, BarChart2 } from 'lucide-react'
+import { LayoutGrid, List, LogOut, Moon, Sun, CheckCircle2, User, Calendar, Flag, BarChart2, Video, Phone } from 'lucide-react'
 import KanbanBoard from '../components/KanbanBoard'
 import TaskDetailsModal from '../components/TaskDetailsModal'
 import NotificationCenter from '../components/NotificationCenter'
@@ -10,6 +10,8 @@ import TaskCalendar from '../components/TaskCalendar'
 import TaskChart from '../components/TaskChart'
 import EmployeeAnalyticsModal from '../components/EmployeeAnalyticsModal'
 import EmployeeProfile from '../components/EmployeeProfile'
+import CreativeProgress from '../components/CreativeProgress'
+import Meetings from '../components/Meetings'
 
 export default function EmployeeDashboard() {
     const { user, signOut } = useAuth()
@@ -17,7 +19,7 @@ export default function EmployeeDashboard() {
     const [tasks, setTasks] = useState<any[]>([])
     const [statuses, setStatuses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'chart' | 'profile'>('list')
+    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'chart' | 'profile' | 'content-calendar' | 'meetings'>('list')
     const [selectedTask, setSelectedTask] = useState<any>(null)
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -479,6 +481,18 @@ export default function EmployeeDashboard() {
                         >
                             <BarChart2 size={18} /> Chart
                         </button>
+                        <button
+                            onClick={() => setViewMode('content-calendar')}
+                            style={glassButtonStyle(viewMode === 'content-calendar')}
+                        >
+                            <Video size={18} /> Content
+                        </button>
+                        <button
+                            onClick={() => setViewMode('meetings')}
+                            style={glassButtonStyle(viewMode === 'meetings')}
+                        >
+                            <Phone size={18} /> Meetings
+                        </button>
                     </div>
                 </div>
 
@@ -487,6 +501,14 @@ export default function EmployeeDashboard() {
                     <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>Loading your tasks...</div>
                 ) : viewMode === 'profile' ? (
                     <EmployeeProfile />
+                ) : viewMode === 'content-calendar' ? (
+                    <div style={{ height: 'calc(100vh - 200px)', overflow: 'hidden' }}>
+                        <CreativeProgress />
+                    </div>
+                ) : viewMode === 'meetings' ? (
+                    <div style={{ height: 'calc(100vh - 200px)', overflow: 'hidden' }}>
+                        <Meetings />
+                    </div>
                 ) : tasks.length === 0 ? (
                     <div style={{
                         ...glassCardStyle,

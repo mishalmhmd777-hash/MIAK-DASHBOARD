@@ -24,6 +24,7 @@
     "@tiptap/extension-task-list": "^2.10.3",
     "@tiptap/react": "^2.10.3",
     "@tiptap/starter-kit": "^2.10.3",
+    "@types/react-window": "^1.8.8",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.555.0",
@@ -33,6 +34,8 @@
     "react-is": "^19.2.1",
     "react-quill-new": "^3.6.0",
     "react-router-dom": "^7.10.0",
+    "react-virtualized-auto-sizer": "^1.0.26",
+    "react-window": "^2.2.3",
     "recharts": "^3.5.1"
   },
   "devDependencies": {

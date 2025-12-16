@@ -25,6 +25,9 @@ import ActivityFeed from '../components/ActivityFeed'
 import NotificationCenter from '../components/NotificationCenter'
 import ClientSidebar from '../components/ClientSidebar'
 import CCProfile from '../components/CCProfile'
+import CreativeProgress from '../components/CreativeProgress'
+import TasksTracker from '../components/TasksTracker'
+import Meetings from '../components/Meetings'
 
 
 interface Profile {
@@ -76,7 +79,7 @@ export default function CCDashboard() {
     const [departments, setDepartments] = useState<Department[]>([])
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'dashboard' | 'profile'>('dashboard')
+    const [viewMode, setViewMode] = useState<'dashboard' | 'profile' | 'creative-progress' | 'tasks-tracker' | 'meetings'>('dashboard')
 
     // Form states
     const [showAddClient, setShowAddClient] = useState(false)
@@ -766,12 +769,37 @@ export default function CCDashboard() {
                 profile={profile}
                 onSignOut={handleSignOut}
                 onProfileClick={() => setViewMode('profile')}
+                onCreativeProgressClick={() => {
+                    setViewMode('creative-progress')
+                    setSelectedClient(null)
+                }}
+                onTasksTrackerClick={() => {
+                    setViewMode('tasks-tracker')
+                    setSelectedClient(null)
+                }}
+                onMeetingsClick={() => {
+                    setViewMode('meetings')
+                    setSelectedClient(null)
+                }}
+                activeView={viewMode === 'dashboard' ? 'clients' : viewMode}
             />
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
                 {viewMode === 'profile' ? (
                     <div style={{ padding: '2rem', overflowY: 'auto', height: '100%' }}>
                         <CCProfile />
+                    </div>
+                ) : viewMode === 'creative-progress' ? (
+                    <div style={{ padding: '2rem', overflowY: 'auto', height: '100%' }}>
+                        <CreativeProgress clientId={selectedClient} />
+                    </div>
+                ) : viewMode === 'tasks-tracker' ? (
+                    <div style={{ overflowY: 'auto', height: '100%' }}>
+                        <TasksTracker clientId={selectedClient} />
+                    </div>
+                ) : viewMode === 'meetings' ? (
+                    <div style={{ overflowY: 'auto', height: '100%' }}>
+                        <Meetings clientId={selectedClient} />
                     </div>
                 ) : (
                     <>

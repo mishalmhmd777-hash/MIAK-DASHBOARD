@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+// ThemeProvider is provided in main.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import AdminRegister from './pages/AdminRegister'

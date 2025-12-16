@@ -1,4 +1,5 @@
-import { LayoutGrid, Plus, Pencil, Trash2, LogOut, Briefcase } from 'lucide-react'
+import { LayoutGrid, Plus, Pencil, Trash2, LogOut, Briefcase, Users, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 
 interface Client {
@@ -24,6 +25,10 @@ interface ClientSidebarProps {
     profile: Profile | null
     onSignOut: () => void
     onProfileClick?: () => void
+    onCreativeProgressClick?: () => void
+    onTasksTrackerClick?: () => void
+    onMeetingsClick?: () => void
+    activeView?: 'clients' | 'creative-progress' | 'tasks-tracker' | 'meetings' | 'profile'
 }
 
 export default function ClientSidebar({
@@ -35,8 +40,13 @@ export default function ClientSidebar({
     onDelete,
     profile,
     onSignOut,
-    onProfileClick
+    onProfileClick,
+    onCreativeProgressClick,
+    onTasksTrackerClick,
+    onMeetingsClick,
+    activeView = 'clients'
 }: ClientSidebarProps) {
+    const { theme, toggleTheme } = useTheme()
 
     return (
         <aside style={{
@@ -74,6 +84,24 @@ export default function ClientSidebar({
                             <LogOut size={12} /> Sign Out
                         </button>
                     </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
+                        style={{
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            padding: '0.5rem',
+                            cursor: 'pointer',
+                            color: 'var(--text-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                        }}
+                        title="Toggle Theme"
+                    >
+                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
                 </div>
             </div>
 
@@ -95,6 +123,60 @@ export default function ClientSidebar({
                     </h1>
                 </div>
             </div>
+
+            {/* Main Navigation */}
+            <div style={{ padding: '1rem 1rem 0' }}>
+                <h2 style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
+                    Menu
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    {[
+                        { id: 'creative-progress', label: 'Content Calendar', icon: LayoutGrid },
+                        { id: 'tasks-tracker', label: 'Tasks Tracker', icon: Briefcase },
+                        { id: 'meetings', label: 'Meetings', icon: Users },
+                    ].map(item => (
+                        <div
+                            key={item.id}
+                            onClick={() => {
+                                if (item.id === 'creative-progress') onCreativeProgressClick?.()
+                                if (item.id === 'tasks-tracker') onTasksTrackerClick?.()
+                                if (item.id === 'meetings') onMeetingsClick?.()
+                            }}
+                            style={{
+                                padding: '0.75rem 0.75rem',
+                                borderRadius: '0.5rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                background: activeView === item.id
+                                    ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)'
+                                    : 'transparent',
+                                color: activeView === item.id ? 'white' : 'var(--text-secondary)',
+                                transition: 'all 0.2s',
+                                fontWeight: activeView === item.id ? '600' : '400',
+                                boxShadow: activeView === item.id ? '0 4px 12px rgba(236, 72, 153, 0.3)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeView !== item.id) {
+                                    e.currentTarget.style.background = 'var(--bg-tertiary)'
+                                    e.currentTarget.style.color = 'var(--text-primary)'
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeView !== item.id) {
+                                    e.currentTarget.style.background = 'transparent'
+                                    e.currentTarget.style.color = 'var(--text-secondary)'
+                                }
+                            }}
+                        >
+                            <item.icon size={18} style={{ opacity: activeView === item.id ? 1 : 0.7 }} />
+                            <span>{item.label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
 
             {/* Clients List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
@@ -144,33 +226,33 @@ export default function ClientSidebar({
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    background: selectedId === client.id
+                                    background: (activeView === 'clients' && selectedId === client.id)
                                         ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)'
                                         : 'transparent',
-                                    color: selectedId === client.id ? 'white' : 'var(--text-secondary)',
+                                    color: (activeView === 'clients' && selectedId === client.id) ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.2s',
-                                    fontWeight: selectedId === client.id ? '600' : '400',
-                                    boxShadow: selectedId === client.id ? '0 4px 12px rgba(236, 72, 153, 0.3)' : 'none'
+                                    fontWeight: (activeView === 'clients' && selectedId === client.id) ? '600' : '400',
+                                    boxShadow: (activeView === 'clients' && selectedId === client.id) ? '0 4px 12px rgba(236, 72, 153, 0.3)' : 'none'
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (selectedId !== client.id) {
+                                    if (activeView !== 'clients' || selectedId !== client.id) {
                                         e.currentTarget.style.background = 'var(--bg-tertiary)'
                                         e.currentTarget.style.color = 'var(--text-primary)'
                                     }
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (selectedId !== client.id) {
+                                    if (activeView !== 'clients' || selectedId !== client.id) {
                                         e.currentTarget.style.background = 'transparent'
                                         e.currentTarget.style.color = 'var(--text-secondary)'
                                     }
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-                                    <Briefcase size={16} style={{ opacity: selectedId === client.id ? 1 : 0.7 }} />
+                                    <Briefcase size={16} style={{ opacity: (activeView === 'clients' && selectedId === client.id) ? 1 : 0.7 }} />
                                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{client.name}</span>
                                 </div>
 
-                                {selectedId === client.id && (
+                                {(activeView === 'clients' && selectedId === client.id) && (
                                     <div style={{ display: 'flex', gap: '0.25rem' }}>
                                         <button onClick={(e) => { e.stopPropagation(); onEdit(client); }} style={{ padding: '0.25rem', border: 'none', background: 'rgba(255,255,255,0.2)', borderRadius: '4px', cursor: 'pointer', color: 'white' }} title="Edit"><Pencil size={12} /></button>
                                         <button onClick={(e) => { e.stopPropagation(); onDelete(client.id); }} style={{ padding: '0.25rem', border: 'none', background: 'rgba(255,255,255,0.2)', borderRadius: '4px', cursor: 'pointer', color: '#fecaca' }} title="Delete"><Trash2 size={12} /></button>

@@ -10,18 +10,27 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>(() => {
-        const savedTheme = localStorage.getItem('theme')
-        return (savedTheme as Theme) || 'light'
-    })
+    const [theme, setTheme] = useState<Theme>('light')
 
     useEffect(() => {
-        localStorage.setItem('theme', theme)
-        document.documentElement.setAttribute('data-theme', theme)
-    }, [theme])
+        // Check local storage or system preference on mount
+        const savedTheme = localStorage.getItem('theme') as Theme
+        if (savedTheme) {
+            setTheme(savedTheme)
+            document.documentElement.setAttribute('data-theme', savedTheme)
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark')
+            document.documentElement.setAttribute('data-theme', 'dark')
+        }
+    }, [])
 
     const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light')
+        setTheme(prev => {
+            const newTheme = prev === 'light' ? 'dark' : 'light'
+            localStorage.setItem('theme', newTheme)
+            document.documentElement.setAttribute('data-theme', newTheme)
+            return newTheme
+        })
     }
 
     return (
