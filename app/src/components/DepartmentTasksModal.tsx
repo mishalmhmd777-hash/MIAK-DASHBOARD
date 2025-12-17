@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from './Modal'
-import { Plus, CheckCircle2, Calendar, User, LayoutGrid, List, X } from 'lucide-react'
+import { CheckCircle2, Calendar, User, LayoutGrid, List, X } from 'lucide-react'
 import KanbanBoard from './KanbanBoard'
 import RichTextEditor from './RichTextEditor'
 import SubtaskTimer from './SubtaskTimer'
@@ -380,10 +380,13 @@ export default function DepartmentTasksModal({
             isOpen={isOpen}
             onClose={onClose}
             title={`Tasks - ${departmentName}`}
-            maxWidth="1400px"
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: 'calc(90vh - 65px)', overflow: 'hidden' }}
+            variant="fullscreen"
+            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
         >
-            <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Tasks - {departmentName}</h2>
+            </div>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
                 {/* Left Panel: Task List */}
                 <div style={{
@@ -452,32 +455,7 @@ export default function DepartmentTasksModal({
                                     <LayoutGrid size={14} /> Board
                                 </button>
                             </div>
-                            <button
-                                onClick={() => {
-                                    setShowCreateForm(true)
-                                    setEditingTask(null)
-                                    setTitle('')
-                                    setDescription('')
-                                    setAssignedTo([])
-                                    setPriority('medium')
-                                    setDueDate('')
-                                }}
-                                style={{
-                                    padding: '0.375rem 0.75rem',
-                                    background: 'var(--accent-color)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '0.5rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.375rem'
-                                }}
-                            >
-                                <Plus size={16} /> New Task
-                            </button>
+
                         </div>
                     </div>
 

@@ -32,10 +32,9 @@ interface Task {
 interface TaskCardProps {
     task: Task
     index: number
-    style?: React.CSSProperties
 }
 
-const TaskCard = React.memo(({ task, index, style }: TaskCardProps) => {
+const TaskCard = React.memo(({ task, index }: TaskCardProps) => {
     return (
         <Draggable draggableId={task.id} index={index}>
             {(provided, snapshot) => (
@@ -45,11 +44,6 @@ const TaskCard = React.memo(({ task, index, style }: TaskCardProps) => {
                     {...provided.dragHandleProps}
                     style={{
                         ...provided.draggableProps.style,
-                        ...style, // Apply virtualization style if passed (mostly for positioning in fixed lists, though standard DnD might fight this, we need to be careful)
-                        top: style?.top, // React-window passes absolute positioning
-                        left: style?.left,
-                        width: style?.width,
-                        height: style?.height,
                         background: 'var(--bg-primary)',
                         padding: '0.75rem',
                         borderRadius: '8px',
@@ -58,7 +52,7 @@ const TaskCard = React.memo(({ task, index, style }: TaskCardProps) => {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.5rem',
-                        marginBottom: '0.75rem' // Add margin since virtualization usually assumes tight packing, but we can handle valid spacing via row gap or this.
+                        marginBottom: '0.75rem'
                     }}
                 >
                     <div style={{ fontWeight: '500', fontSize: '0.875rem', lineHeight: '1.3', color: 'var(--text-primary)' }}>{task.title}</div>
@@ -100,8 +94,7 @@ const TaskCard = React.memo(({ task, index, style }: TaskCardProps) => {
         prev.task.id === next.task.id &&
         prev.task.title === next.task.title &&
         prev.task.status_id === next.task.status_id &&
-        prev.index === next.index &&
-        prev.style === next.style
+        prev.index === next.index
     )
 })
 

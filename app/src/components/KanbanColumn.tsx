@@ -1,8 +1,5 @@
-import React, { type CSSProperties } from 'react'
+import React from 'react'
 import { Droppable } from '@hello-pangea/dnd'
-import * as ReactWindow from 'react-window';
-const { FixedSizeList, areEqual } = ReactWindow;
-import AutoSizer from 'react-virtualized-auto-sizer'
 import TaskCard from './TaskCard'
 
 interface KanbanColumnProps {
@@ -13,27 +10,6 @@ interface KanbanColumnProps {
     }
     tasks: any[]
 }
-
-const Row = React.memo(({ data, index, style }: { data: any[], index: number, style: CSSProperties }) => {
-    const task = data[index]
-    // We pass the style from react-window to position the item absolutely
-    // But we also need to account for margin/gutter.
-    // FixedSizeList items are usually tight.
-    // We'll pass the style to TaskCard, which will apply it.
-    // We adjust height slightly in the List itemSize to account for gaps if needed, 
-    // or we just render the card smaller than the slot.
-
-    // Adjust style to add a "gutter" within the slot
-    const gutter = 8
-    const itemStyle = {
-        ...style,
-        left: Number(style.left) + gutter,
-        width: Number(style.width) - (gutter * 2),
-        height: Number(style.height) - gutter,
-    }
-
-    return <TaskCard task={task} index={index} style={itemStyle} />
-}, areEqual) // react-window's areEqual checks for style/data changes
 
 const KanbanColumn = ({ status, tasks }: KanbanColumnProps) => {
     return (
@@ -55,44 +31,29 @@ const KanbanColumn = ({ status, tasks }: KanbanColumnProps) => {
             </div>
 
             {/* List Body */}
-            <div style={{ flex: 1, minHeight: 0 }}>
-                <Droppable
-                    droppableId={status.id}
-                    mode="virtual"
-                    renderClone={(provided, _snapshot, _rubric) => (
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                <Droppable droppableId={status.id}>
+                    {(provided, snapshot) => (
                         <div
                             ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{ ...provided.draggableProps.style, padding: '0.75rem', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                            {...provided.droppableProps}
+                            style={{
+                                padding: '0.75rem',
+                                minHeight: '100px',
+                                background: snapshot.isDraggingOver ? 'var(--bg-tertiary)' : 'transparent',
+                                transition: 'background 0.2s'
+                            }}
                         >
-                            {/* Simplified clone for performance or just render the TaskCard */}
-                            <div style={{ fontWeight: 'bold' }}>Moving task...</div>
+                            {tasks.map((task, index) => (
+                                <TaskCard key={task.id} task={task} index={index} />
+                            ))}
+                            {provided.placeholder}
                         </div>
-                    )}
-                >
-                    {(provided) => (
-                        <AutoSizer>
-                            {({ height, width }) => (
-                                <FixedSizeList
-                                    height={height}
-                                    itemCount={tasks.length}
-                                    itemSize={160} // Estimate card height + gap
-                                    width={width}
-                                    outerRef={provided.innerRef}
-                                    itemData={tasks}
-                                    className="task-list"
-                                >
-                                    {Row}
-                                </FixedSizeList>
-                            )}
-                        </AutoSizer>
                     )}
                 </Droppable>
             </div>
         </div>
     )
 }
-
 
 export default React.memo(KanbanColumn)

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import AdminRegister from './pages/AdminRegister'
 import Dashboard from './pages/Dashboard'
+import CommandPalette from './components/CommandPalette'
 import './App.css'
 
 function AppContent() {
@@ -49,6 +50,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <CommandPalette />
         <AppContent />
       </AuthProvider>
     </BrowserRouter>

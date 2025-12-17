@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { LayoutGrid, List, LogOut, Moon, Sun, CheckCircle2, User, Calendar, Flag, BarChart2, Video, Phone } from 'lucide-react'
+import { LayoutGrid, List, LogOut, Moon, Sun, CheckCircle2, User, Calendar, Flag, BarChart2, Phone } from 'lucide-react'
 import KanbanBoard from '../components/KanbanBoard'
 import TaskDetailsModal from '../components/TaskDetailsModal'
 import NotificationCenter from '../components/NotificationCenter'
@@ -10,7 +10,6 @@ import TaskCalendar from '../components/TaskCalendar'
 import TaskChart from '../components/TaskChart'
 import EmployeeAnalyticsModal from '../components/EmployeeAnalyticsModal'
 import EmployeeProfile from '../components/EmployeeProfile'
-import CreativeProgress from '../components/CreativeProgress'
 import Meetings from '../components/Meetings'
 
 export default function EmployeeDashboard() {
@@ -19,7 +18,7 @@ export default function EmployeeDashboard() {
     const [tasks, setTasks] = useState<any[]>([])
     const [statuses, setStatuses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'chart' | 'profile' | 'content-calendar' | 'meetings'>('list')
+    const [viewMode, setViewMode] = useState<'list' | 'board' | 'calendar' | 'chart' | 'profile' | 'meetings'>('list')
     const [selectedTask, setSelectedTask] = useState<any>(null)
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
@@ -46,6 +45,18 @@ export default function EmployeeDashboard() {
             console.error('Error fetching avatar:', error)
         }
     }
+
+    useEffect(() => {
+        const handleNavigation = (e: any) => {
+            const view = e.detail.view
+            if (view === 'dashboard' || view === 'tasks') setViewMode('list')
+            else if (view === 'meetings') setViewMode('meetings')
+            else if (view === 'profile') setViewMode('profile')
+        }
+
+        window.addEventListener('dashboard-navigate', handleNavigation)
+        return () => window.removeEventListener('dashboard-navigate', handleNavigation)
+    }, [])
 
     useEffect(() => {
         loadData()
@@ -105,16 +116,10 @@ export default function EmployeeDashboard() {
 
             if (assignError) throw assignError
 
-            if (!assignments || assignments.length === 0) {
-                setTasks([])
-                setLoading(false)
-                return
-            }
+            const taskIds = assignments?.map(a => a.task_id) || []
 
-            const taskIds = assignments.map(a => a.task_id)
-
-            // 2. Get Tasks
-            const { data: tasksData, error: tasksError } = await supabase
+            // 2. Get Tasks - Fetch tasks where user is assigned directly OR via task_assignments
+            let query = supabase
                 .from('tasks')
                 .select(`
                     *,
@@ -124,8 +129,15 @@ export default function EmployeeDashboard() {
                     ),
                     creator:profiles!created_by(full_name)
                 `)
-                .in('id', taskIds)
                 .order('created_at', { ascending: false })
+
+            if (taskIds.length > 0) {
+                query = query.or(`assigned_to.eq.${user.id},id.in.(${taskIds.join(',')})`)
+            } else {
+                query = query.eq('assigned_to', user.id)
+            }
+
+            const { data: tasksData, error: tasksError } = await query
 
             if (tasksError) throw tasksError
 
@@ -482,12 +494,6 @@ export default function EmployeeDashboard() {
                             <BarChart2 size={18} /> Chart
                         </button>
                         <button
-                            onClick={() => setViewMode('content-calendar')}
-                            style={glassButtonStyle(viewMode === 'content-calendar')}
-                        >
-                            <Video size={18} /> Content
-                        </button>
-                        <button
                             onClick={() => setViewMode('meetings')}
                             style={glassButtonStyle(viewMode === 'meetings')}
                         >
@@ -501,10 +507,6 @@ export default function EmployeeDashboard() {
                     <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>Loading your tasks...</div>
                 ) : viewMode === 'profile' ? (
                     <EmployeeProfile />
-                ) : viewMode === 'content-calendar' ? (
-                    <div style={{ height: 'calc(100vh - 200px)', overflow: 'hidden' }}>
-                        <CreativeProgress />
-                    </div>
                 ) : viewMode === 'meetings' ? (
                     <div style={{ height: 'calc(100vh - 200px)', overflow: 'hidden' }}>
                         <Meetings />
@@ -520,7 +522,7 @@ export default function EmployeeDashboard() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>You have no pending tasks assigned to you.</p>
                     </div>
                 ) : viewMode === 'board' ? (
-                    <div style={glassCardStyle}>
+                    <div style={{ ...glassCardStyle, height: '700px', overflow: 'hidden' }}>
                         <KanbanBoard
                             tasks={tasks}
                             statuses={statuses}
@@ -590,9 +592,9 @@ export default function EmployeeDashboard() {
                                                 fontSize: '0.75rem',
                                                 padding: '0.35rem 0.8rem',
                                                 borderRadius: '2rem',
-                                                background: status?.color ? `${status.color}20` : 'var(--bg-tertiary)',
-                                                color: status?.color || 'var(--text-secondary)',
-                                                fontWeight: '800',
+                                                background: status?.color ? `${status.color}20` : 'var(--bg-tertiary)', // Keep light background tint
+                                                color: 'var(--text-primary)', // Use standard text color
+                                                fontWeight: '600',
                                                 letterSpacing: '0.03em',
                                                 border: `1px solid ${status?.color}40`
                                             }}>
@@ -617,7 +619,7 @@ export default function EmployeeDashboard() {
                                         )}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <User size={16} />
-                                            <span className="text-gradient">{task.assignments?.length || 0}</span>
+                                            <span className="text-gradient">{task.assignments?.length || (task.assigned_to ? 1 : 0)}</span>
                                         </div>
                                     </div>
                                 </div>

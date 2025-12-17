@@ -17,7 +17,8 @@ import {
     Kanban,
     ChevronLeft,
     ChevronRight,
-    Clock
+    Clock,
+    Filter
 } from 'lucide-react'
 import {
     format,
@@ -37,6 +38,7 @@ import {
 interface Task {
     id: string
     title: string
+    description?: string
     content_type: string | null
     start_date: string | null
     due_date: string | null
@@ -45,12 +47,18 @@ interface Task {
         label: string
         color: string
     } | null
-    assignee: {
+    assignee?: {
         id: string
         full_name: string
         email: string
         avatar_url?: string
     } | null
+    assignees?: {
+        id: string
+        full_name: string
+        email: string
+        avatar_url?: string
+    }[]
     priority: 'low' | 'medium' | 'high' | null
     client: {
         name: string
@@ -88,6 +96,13 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
     const [activeOpenMenuId, setActiveOpenMenuId] = useState<string | null>(null)
     const [taskToEdit, setTaskToEdit] = useState<Task | null>(null)
     const [filterTimeRange, setFilterTimeRange] = useState<'all' | 'weekly' | 'monthly'>('all')
+    const [showFilters, setShowFilters] = useState(false)
+
+    // Filter State
+    const [assigneeFilter, setAssigneeFilter] = useState('')
+    const [contentTypeFilter, setContentTypeFilter] = useState('')
+    const [dateRangeStart, setDateRangeStart] = useState('')
+    const [dateRangeEnd, setDateRangeEnd] = useState('')
 
     useEffect(() => {
         fetchTasks()
@@ -125,6 +140,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                 .select(`
                     id,
                     title,
+                    description,
                     department_id,
                     content_type,
                     start_date,
@@ -132,6 +148,9 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                     priority,
                     status:task_statuses(id, label, color),
                     assignee:profiles!tasks_assigned_to_fkey(id, full_name, email, avatar_url),
+                    assignments:task_assignments(
+                        user:profiles(id, full_name, email, avatar_url)
+                    ),
                     department:departments!inner(
                         workspace:workspaces!inner(
                             client:clients!inner(name)
@@ -150,19 +169,35 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
 
             if (error) throw error
 
-            const formattedTasks = data.map((t: any) => ({
-                id: t.id,
-                title: t.title,
-                department_id: t.department_id,
-                content_type: t.content_type,
-                start_date: t.start_date,
-                due_date: t.due_date,
-                priority: t.priority,
-                status: t.status,
-                assignee: t.assignee,
-                client: t.department?.workspace?.client,
-                comments_count: t.task_comments?.[0]?.count || 0
-            }))
+            const formattedTasks = data.map((t: any) => {
+                // Merge legacy assignee with new assignments
+                const assigneesMap = new Map()
+
+                if (t.assignee) {
+                    assigneesMap.set(t.assignee.id, t.assignee)
+                }
+
+                if (t.assignments) {
+                    t.assignments.forEach((a: any) => {
+                        if (a.user) assigneesMap.set(a.user.id, a.user)
+                    })
+                }
+
+                return {
+                    id: t.id,
+                    title: t.title,
+                    description: t.description,
+                    department_id: t.department_id,
+                    content_type: t.content_type,
+                    start_date: t.start_date,
+                    due_date: t.due_date,
+                    priority: t.priority,
+                    status: t.status,
+                    assignees: Array.from(assigneesMap.values()),
+                    client: t.department?.workspace?.client,
+                    comments_count: t.task_comments?.[0]?.count || 0
+                }
+            })
 
             setTasks(formattedTasks)
         } catch (error) {
@@ -310,8 +345,64 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
         const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             task.client?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
+        // Assignee Filter
+        let matchesAssignee = true
+        if (assigneeFilter) {
+            matchesAssignee = task.assignees?.some(a => a.id === assigneeFilter) || false
+        }
+
+        // Content Type Filter
+        let matchesType = true
+        if (contentTypeFilter) {
+            matchesType = task.content_type === contentTypeFilter
+        }
+
+        // Date Range Filter
+        let matchesDateRange = true
+        if (dateRangeStart || dateRangeEnd) {
+            const startDate = task.start_date ? new Date(task.start_date) : null
+            const dueDate = task.due_date ? new Date(task.due_date) : null
+
+            const rangeStart = dateRangeStart ? new Date(dateRangeStart) : null
+            const rangeEnd = dateRangeEnd ? new Date(dateRangeEnd) : null
+
+            // If Start Date is set, task must start on/after OR due on/after
+            // Let's use strict intersection logic or simple overlap.
+            // Requirement usually: Find tasks active in this period.
+            // Or tasks due in this period?
+            // "Quickly find specific tasks" -> Likely due date or start date.
+            // Let's check if task's range [start, due] overlaps with [rangeStart, rangeEnd].
+            // If task has only start or only due, we check point in range.
+
+            // Simplified logic: If task due date is within range (if due date exists).
+            // Or if Start Date is within range.
+
+            // Let's implement: Task Event falls within Filter Range.
+            // Start of Filter <= Task End/Due AND End of Filter >= Task Start
+
+            // Fallback for tasks with single date:
+            const taskStart = startDate || dueDate
+            const taskEnd = dueDate || startDate
+
+            if (taskStart && taskEnd) {
+                if (rangeStart && taskEnd < rangeStart) matchesDateRange = false
+                if (rangeEnd && taskStart > rangeEnd) matchesDateRange = false
+            } else if (rangeStart || rangeEnd) {
+                // Task has no dates, so it doesn't match a specific date range query effectively?
+                // Or we include them? Usually exclude un-dated items from date filters.
+                matchesDateRange = false
+            }
+        }
+
+
         let matchesTime = true
-        if (filterTimeRange !== 'all') {
+        // Legacy time filter (Weekly/Monthly view toggles) - maintain this if useful or merge logic.
+        // If Date Range is active, ignore legacy filter or combine?
+        // User asked for "dropdown filters... Date Ranges". 
+        // Logic: specific date range inputs override the preset "Weekly/Monthly" pills.
+        if ((dateRangeStart || dateRangeEnd)) {
+            matchesTime = true // Handled by matchesDateRange
+        } else if (filterTimeRange !== 'all') {
             const now = new Date()
             const start = task.start_date ? parseISO(task.start_date) : null
             const due = task.due_date ? parseISO(task.due_date) : null
@@ -331,8 +422,22 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
             }
         }
 
-        if (activeTab === 'Overview') return matchesSearch && matchesTime
-        return matchesSearch && matchesTime && task.content_type === activeTab
+        // Tab Filter
+        let matchesTab = true;
+        // If content type filter is set via dropdown, we might ignore tab or treat tab as a shortcut?
+        // "Benefit: Quickly find... without scrolling".
+        // The dropdown effectively replaces the tabs' function if used.
+        // Let's say: Dropdown PRECEDES Tab. If Dropdown is set, ignore Tab (or set Tab to Overview).
+        // Actually, let's keep it simple: Tab overrides unless 'Overview'.
+        if (contentTypeFilter && activeTab !== 'Overview') {
+            // Conflict? Let's say ALL filters must match.
+            // If Tab=Video and Filter=Static -> No results. 
+        }
+
+        if (activeTab === 'Overview') matchesTab = true
+        else matchesTab = task.content_type === activeTab
+
+        return matchesSearch && matchesTime && matchesDateRange && matchesAssignee && matchesType && matchesTab
     })
 
     // Dynamic Tabs
@@ -346,6 +451,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
     const tabs = ['Overview', ...allTypes]
     // Filter out if activeTab is not in list (unless it's Overview)
     // Actually, we want to show all types that exist or are base.
+
 
     return (
         <div style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -441,6 +547,24 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                             Reset
                         </button>
 
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            style={{
+                                padding: '0.5rem',
+                                background: showFilters ? 'var(--bg-tertiary)' : 'transparent',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-secondary)',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            title="Toggle Filters"
+                        >
+                            <Filter size={18} />
+                        </button>
+
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
                                 onClick={() => setFilterTimeRange(filterTimeRange === 'weekly' ? 'all' : 'weekly')}
@@ -493,7 +617,128 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                         </button>
                     </div>
                 </div>
+                {/* Advanced Filters */}
+                {showFilters && (
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', animation: 'slideDown 0.2s ease-out' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Assignee</label>
+                            <select
+                                value={assigneeFilter}
+                                onChange={(e) => setAssigneeFilter(e.target.value)}
+                                style={{
+                                    padding: '0.5rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    fontSize: '0.875rem',
+                                    minWidth: '150px'
+                                }}
+                            >
+                                <option value="">All Assignees</option>
+                                {Array.from(new Set(tasks.flatMap(t => t.assignees?.map(a => JSON.stringify({ id: a.id, name: a.full_name || a.email })) || [])))
+                                    .map(str => JSON.parse(str))
+                                    .map((assignee: any) => (
+                                        <option key={assignee.id} value={assignee.id}>{assignee.name}</option>
+                                    ))
+                                }
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Content Type</label>
+                            <select
+                                value={contentTypeFilter}
+                                onChange={(e) => setContentTypeFilter(e.target.value)}
+                                style={{
+                                    padding: '0.5rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    fontSize: '0.875rem',
+                                    minWidth: '150px'
+                                }}
+                            >
+                                <option value="">All Types</option>
+                                {['Static', 'Video', 'Reel', 'Shooting'].map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Start Date</label>
+                            <input
+                                type="date"
+                                value={dateRangeStart}
+                                onChange={(e) => setDateRangeStart(e.target.value)}
+                                style={{
+                                    padding: '0.4rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    fontSize: '0.875rem'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>End Date</label>
+                            <input
+                                type="date"
+                                value={dateRangeEnd}
+                                onChange={(e) => setDateRangeEnd(e.target.value)}
+                                style={{
+                                    padding: '0.4rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    fontSize: '0.875rem'
+                                }}
+                            />
+                        </div>
+
+                        {(assigneeFilter || contentTypeFilter || dateRangeStart || dateRangeEnd) && (
+                            <button
+                                onClick={() => {
+                                    setAssigneeFilter('')
+                                    setContentTypeFilter('')
+                                    setDateRangeStart('')
+                                    setDateRangeEnd('')
+                                }}
+                                style={{
+                                    marginTop: '1.25rem',
+                                    padding: '0.5rem 1rem',
+                                    background: 'transparent',
+                                    color: 'var(--accent-color)',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                Clear Filters
+                            </button>
+                        )}
+                    </div>
+
+                )}
             </div>
+            <style>
+                {`
+                    @keyframes slideDown {
+                        from { opacity: 0; transform: translateY(-10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                `}
+            </style>
 
             {/* View Content */}
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -566,11 +811,24 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                             {getTypeIcon(task.content_type)}
                                             {task.title}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem' }}>
-                                                {(task.assignee?.full_name || task.assignee?.email || 'U')[0].toUpperCase()}
-                                            </div>
-                                            <span style={{ fontSize: '0.875rem' }}>{task.assignee?.full_name || task.assignee?.email || 'Unassigned'}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            {task.assignees && task.assignees.length > 0 ? (
+                                                task.assignees.map((assignee: any) => (
+                                                    <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem' }}>
+                                                            {(assignee.full_name || assignee.email || 'U')[0].toUpperCase()}
+                                                        </div>
+                                                        <span style={{ fontSize: '0.875rem' }}>{assignee.full_name || assignee.email}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.65rem' }}>
+                                                        U
+                                                    </div>
+                                                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Unassigned</span>
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <span style={{
@@ -732,7 +990,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                                                     {...provided.draggableProps}
                                                                     {...provided.dragHandleProps}
                                                                     style={{
-                                                                        background: 'white', padding: '0.75rem', borderRadius: '8px',
+                                                                        background: 'var(--sidebar-bg)', padding: '0.75rem', borderRadius: '8px',
                                                                         boxShadow: snapshot.isDragging ? '0 5px 10px rgba(0,0,0,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
                                                                         border: '1px solid var(--border-color)',
                                                                         display: 'flex', flexDirection: 'column', gap: '0.5rem',
@@ -817,7 +1075,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
 
                 {/* CALENDAR VIEW */}
                 {viewMode === 'calendar' && (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
                         {/* Calendar Controls */}
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: '600' }}>{format(currentDate, 'MMMM yyyy')}</h2>
@@ -854,7 +1112,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                                 borderRight: '1px solid var(--border-color)',
                                                 borderBottom: '1px solid var(--border-color)',
                                                 padding: '0.5rem',
-                                                background: isCurrentMonth ? 'white' : 'var(--bg-tertiary)',
+                                                background: isCurrentMonth ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
                                                 opacity: isCurrentMonth ? 1 : 0.5
                                             }}>
                                                 <div style={{ textAlign: 'right', fontSize: '0.75rem', marginBottom: '0.25rem', fontWeight: isSameDay(day, new Date()) ? 'bold' : 'normal', color: isSameDay(day, new Date()) ? '#3b82f6' : 'inherit' }}>
@@ -862,7 +1120,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     {dayTasks.map(t => (
-                                                        <div key={t.id} style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', borderRadius: '3px', background: '#EFF6FF', color: '#1E3A8A', borderLeft: '2px solid #3b82f6', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }} title={t.title}>
+                                                        <div key={t.id} style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', borderRadius: '3px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderLeft: '2px solid #3b82f6', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }} title={t.title}>
                                                             {t.title}
                                                         </div>
                                                     ))}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from './Modal'
-import { X, Briefcase, Link, MapPin } from 'lucide-react'
+import { X, Briefcase, Link, MapPin, ChevronDown, ChevronUp, Search, Check } from 'lucide-react'
 
 interface MeetingModalProps {
     isOpen: boolean
@@ -20,10 +20,17 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
     const [loading, setLoading] = useState(false)
 
     const [clients, setClients] = useState<any[]>([])
+    const [profiles, setProfiles] = useState<any[]>([])
+    const [participants, setParticipants] = useState<string[]>([])
+    const [isParticipantsOpen, setIsParticipantsOpen] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [isClientOpen, setIsClientOpen] = useState(false)
+    const [clientSearchTerm, setClientSearchTerm] = useState('')
 
     useEffect(() => {
         if (isOpen) {
             fetchClients()
+            fetchProfiles()
         }
     }, [isOpen])
 
@@ -32,12 +39,17 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
         setClients(data || [])
     }
 
+    const fetchProfiles = async () => {
+        const { data } = await supabase.from('profiles').select('id, full_name, email')
+        setProfiles(data || [])
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
 
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('meetings')
                 .insert({
                     title,
@@ -48,6 +60,27 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
                     platform,
                     meeting_link: meetingLink
                 })
+                .select()
+                .single()
+
+            if (error) throw error
+
+            // Add participants if any
+            if (participants.length > 0 && data) {
+                const participantData = participants.map(userId => ({
+                    meeting_id: data.id,
+                    user_id: userId
+                }))
+
+                const { error: partError } = await supabase
+                    .from('meeting_participants')
+                    .insert(participantData)
+
+                if (partError) {
+                    console.error('Error adding participants:', partError)
+                    // Don't throw here, meeting is already created, just log it.
+                }
+            }
 
             if (error) throw error
 
@@ -71,6 +104,7 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
         setEndTime('')
         setMeetingLink('')
         setPlatform('Google Meet')
+        setParticipants([])
     }
 
     if (!isOpen) return null
@@ -108,17 +142,208 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
                 <div>
                     <label style={labelStyle}>Client (Optional)</label>
                     <div style={{ position: 'relative' }}>
-                        <Briefcase size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                        <select
-                            value={clientId}
-                            onChange={e => setClientId(e.target.value)}
-                            style={{ ...inputStyle, paddingLeft: '2.5rem' }}
+                        <Briefcase size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', zIndex: 1 }} />
+                        <div
+                            onClick={() => setIsClientOpen(!isClientOpen)}
+                            style={{
+                                ...inputStyle,
+                                paddingLeft: '2.5rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
                         >
-                            <option value="">No Client</option>
-                            {clients.map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
+                            <span style={{ color: clientId ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                                {clientId
+                                    ? clients.find(c => c.id === clientId)?.name || 'No Client'
+                                    : 'No Client'
+                                }
+                            </span>
+                            {isClientOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </div>
+
+                        {isClientOpen && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 10,
+                                marginTop: '0.25rem',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '6px',
+                                padding: '0.5rem',
+                                background: 'var(--bg-secondary)',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                            }}>
+                                <div style={{ paddingBottom: '0.5rem', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, background: 'var(--bg-secondary)' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <Search size={14} style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                        <input
+                                            type="text"
+                                            value={clientSearchTerm}
+                                            onChange={(e) => setClientSearchTerm(e.target.value)}
+                                            placeholder="Search clients..."
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.4rem 0.5rem 0.4rem 2rem',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'var(--bg-tertiary)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.8rem',
+                                                outline: 'none'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div
+                                    onClick={() => {
+                                        setClientId('')
+                                        setIsClientOpen(false)
+                                    }}
+                                    style={{
+                                        padding: '0.5rem',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        fontSize: '0.875rem',
+                                        color: !clientId ? 'var(--accent-color)' : 'var(--text-primary)',
+                                        background: !clientId ? 'var(--bg-tertiary)' : 'transparent',
+                                        marginBottom: '0.25rem'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                                    onMouseLeave={e => !clientId && (e.currentTarget.style.background = 'var(--bg-tertiary)') || (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    No Client
+                                </div>
+
+                                {clients.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase())).length === 0 ? (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '0.5rem' }}>No clients found</p>
+                                ) : (
+                                    clients.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase())).map(c => (
+                                        <div
+                                            key={c.id}
+                                            onClick={() => {
+                                                setClientId(c.id)
+                                                setIsClientOpen(false)
+                                            }}
+                                            style={{
+                                                padding: '0.5rem',
+                                                cursor: 'pointer',
+                                                borderRadius: '4px',
+                                                fontSize: '0.875rem',
+                                                color: clientId === c.id ? 'var(--accent-color)' : 'var(--text-primary)',
+                                                background: clientId === c.id ? 'var(--bg-tertiary)' : 'transparent',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                                            onMouseLeave={e => clientId !== c.id && (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            {c.name}
+                                            {clientId === c.id && <Check size={14} />}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Participants */}
+                <div>
+                    <label style={labelStyle}>Participants</label>
+                    <div style={{ position: 'relative' }}>
+                        <div
+                            onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
+                            style={{
+                                ...inputStyle,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
+                        >
+                            <span style={{ color: participants.length === 0 ? 'var(--text-secondary)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {participants.length === 0
+                                    ? "Select participants..."
+                                    : `${participants.length} selected`
+                                }
+                            </span>
+                            {isParticipantsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </div>
+
+                        {isParticipantsOpen && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 10,
+                                marginTop: '0.25rem',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '6px',
+                                padding: '0.5rem',
+                                background: 'var(--bg-secondary)',
+                                maxHeight: '250px',
+                                overflowY: 'auto',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                            }}>
+                                <div style={{ padding: '0.5rem', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, borderBottom: '1px solid var(--border-color)' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        <Search size={14} style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                        <input
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            placeholder="Search employees..."
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.4rem 0.5rem 0.4rem 2rem',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'var(--bg-tertiary)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.8rem',
+                                                outline: 'none'
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                </div>
+
+                                {profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', padding: '0.5rem' }}>No profiles found</p>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem' }}>
+                                        {profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+                                            <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-primary)', padding: '0.25rem', borderRadius: '4px', transition: 'background 0.2s', ':hover': { background: 'var(--bg-tertiary)' } } as any}>
+                                                <input
+                                                    type="checkbox"
+                                                    value={p.id}
+                                                    checked={participants.includes(p.id)}
+                                                    onChange={e => {
+                                                        if (e.target.checked) {
+                                                            setParticipants([...participants, p.id])
+                                                        } else {
+                                                            setParticipants(participants.filter(id => id !== p.id))
+                                                        }
+                                                    }}
+                                                    style={{ cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                />
+                                                {p.full_name || p.email}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

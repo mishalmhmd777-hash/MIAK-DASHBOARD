@@ -5,7 +5,10 @@ import {
     List,
     Search,
     User,
-    Calendar
+    Calendar,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react'
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd'
 import KanbanColumn from './KanbanColumn'
@@ -23,6 +26,11 @@ interface Task {
         full_name: string
         avatar_url?: string
     }
+    assignees?: {
+        id: string
+        full_name: string
+        avatar_url?: string
+    }[]
     status?: {
         label: string
         color: string
@@ -35,6 +43,7 @@ interface Task {
             }
         }
     }
+    subtasks_content?: string
 }
 
 
@@ -55,6 +64,7 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
     const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const [prioritySort, setPrioritySort] = useState<'asc' | 'desc' | null>(null)
 
     // For the Kanban board, it usually works best within a single context (like a department).
     // If we are showing ALL tasks, a Kanban board might be messy if columns are department-specific.
@@ -93,12 +103,16 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                     id,
                     title,
                     description,
+                    subtasks_content,
                     priority,
                     due_date,
                     status_id,
                     department_id,
                     status:task_statuses(label, color),
-                    assignee:profiles!tasks_assigned_to_fkey(full_name, avatar_url),
+                    assignee:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url),
+                    assignments:task_assignments(
+                        user:profiles(id, full_name, avatar_url)
+                    ),
                     department:departments!inner(
                         name,
                         workspace:workspaces!inner(
@@ -117,12 +131,28 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
 
             if (error) throw error
 
-            const formattedTasks = data.map((t: any) => ({
-                ...t,
-                assignee: t.assignee, // Profile object
-                client_name: t.department?.workspace?.client?.name,
-                dept_name: t.department?.name
-            }))
+            const formattedTasks = data.map((t: any) => {
+                // Merge legacy assignee with new assignments
+                const assigneesMap = new Map()
+
+                if (t.assignee) {
+                    assigneesMap.set(t.assignee.id, t.assignee)
+                }
+
+                if (t.assignments) {
+                    t.assignments.forEach((a: any) => {
+                        if (a.user) assigneesMap.set(a.user.id, a.user)
+                    })
+                }
+
+                return {
+                    ...t,
+                    assignee: t.assignee, // Legacy Profile object
+                    assignees: Array.from(assigneesMap.values()),
+                    client_name: t.department?.workspace?.client?.name,
+                    dept_name: t.department?.name
+                }
+            })
 
             setTasks(formattedTasks)
         } catch (error) {
@@ -132,10 +162,40 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
         }
     }
 
+    const togglePrioritySort = () => {
+        setPrioritySort(current => {
+            if (current === null) return 'desc' // Default to High -> Low first
+            if (current === 'desc') return 'asc' // Then Low -> High
+            return null // Then back to default (submission order usually)
+        })
+    }
+
     const filteredTasks = tasks.filter(task =>
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.department?.workspace?.client?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    ).sort((a, b) => {
+        if (!prioritySort) return 0
+
+        const priorityWeight = { high: 3, medium: 2, low: 1 }
+        const weightA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0
+        const weightB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0
+
+        if (prioritySort === 'asc') {
+            return weightA - weightB
+        } else {
+            return weightB - weightA
+        }
+    })
+
+    const calculateProgress = (subtasksContent: string | undefined): number => {
+        if (!subtasksContent) return 0
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(subtasksContent, 'text/html')
+        const allTodos = doc.querySelectorAll('li[data-type="taskItem"]')
+        const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
+        if (allTodos.length === 0) return 0
+        return Math.round((completedTodos.length / allTodos.length) * 100)
+    }
 
     const handleDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result
@@ -269,7 +329,15 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                         <div>Assignee</div>
                         <div>Status</div>
                         <div>Due Date</div>
-                        <div>Priority</div>
+                        <div
+                            onClick={togglePrioritySort}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', userSelect: 'none' }}
+                        >
+                            Priority
+                            {prioritySort === 'asc' && <ArrowUp size={14} />}
+                            {prioritySort === 'desc' && <ArrowDown size={14} />}
+                            {prioritySort === null && <ArrowUpDown size={14} style={{ opacity: 0.5 }} />}
+                        </div>
                     </div>
 
                     {/* Body */}
@@ -299,6 +367,16 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                         <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {task.description ? task.description.replace(/<[^>]*>?/gm, '') : 'No description'}
                                         </div>
+                                        {task.subtasks_content && calculateProgress(task.subtasks_content) > 0 && (
+                                            <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '90%' }}>
+                                                <div style={{ flex: 1, height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                    <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.3s' }} />
+                                                </div>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--accent-color)', minWidth: '25px' }}>
+                                                    {calculateProgress(task.subtasks_content)}%
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Client */}
@@ -308,16 +386,27 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                     </div>
 
                                     {/* Assignee */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{
-                                            width: '24px', height: '24px', borderRadius: '50%',
-                                            background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)'
-                                        }}>
-                                            {task.assignee?.full_name?.[0] || <User size={12} />}
-                                        </div>
-                                        <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{task.assignee?.full_name || 'Unassigned'}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                        {task.assignees && task.assignees.length > 0 ? (
+                                            task.assignees.map((assignee: any) => (
+                                                <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{
+                                                        width: '24px', height: '24px', borderRadius: '50%',
+                                                        background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)'
+                                                    }}>
+                                                        {assignee.full_name?.[0]?.toUpperCase() || <User size={12} />}
+                                                    </div>
+                                                    <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{assignee.full_name || assignee.email}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.5 }}>
+                                                <User size={14} />
+                                                <span style={{ fontSize: '0.875rem' }}>Unassigned</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Status */}

@@ -206,6 +206,13 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                                 </div>
                             ))}
                         </div>
+                        {/* Start Date */}
+                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Clock size={16} /> Start Date
+                        </div>
+                        <div style={{ color: 'var(--text-primary)' }}>
+                            {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'No start date'}
+                        </div>
                         {/* Due Date */}
                         <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Clock size={16} /> Due Date

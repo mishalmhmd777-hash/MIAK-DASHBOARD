@@ -14,9 +14,7 @@ import {
     Trash2,
     ClipboardList,
     BarChart3,
-    Search,
-    Moon,
-    Sun
+    Search
 } from 'lucide-react'
 import DepartmentTasksModal from '../components/DepartmentTasksModal'
 import DashboardAnalyticsModal from '../components/DashboardAnalyticsModal'
@@ -70,7 +68,7 @@ interface Employee {
 
 export default function CCDashboard() {
     const { user, signOut } = useAuth()
-    const { theme, toggleTheme } = useTheme()
+    const { theme } = useTheme()
     const [profile, setProfile] = useState<Profile | null>(null)
     const [clients, setClients] = useState<Client[]>([])
     const [selectedClient, setSelectedClient] = useState<string | null>(null)
@@ -117,6 +115,19 @@ export default function CCDashboard() {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
+    // Event Listener for Command Palette Navigation
+    useEffect(() => {
+        const handleNavigation = (e: any) => {
+            const view = e.detail.view
+            if (view === 'dashboard') setViewMode('dashboard')
+            else if (view === 'tasks') setViewMode('tasks-tracker')
+            else if (view === 'meetings') setViewMode('meetings')
+            else if (view === 'profile') setViewMode('profile')
+        }
+
+        window.addEventListener('dashboard-navigate', handleNavigation)
+        return () => window.removeEventListener('dashboard-navigate', handleNavigation)
+    }, [])
     useEffect(() => {
         loadProfile()
         loadClients()
@@ -840,21 +851,7 @@ export default function CCDashboard() {
                                 {/* Right Actions */}
                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                                     <NotificationCenter />
-                                    <button
-                                        onClick={toggleTheme}
-                                        style={{
-                                            padding: '0.75rem',
-                                            borderRadius: '12px',
-                                            border: 'var(--glass-border)',
-                                            background: 'var(--bg-tertiary)',
-                                            color: 'var(--text-secondary)',
-                                            cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
-                                    </button>
+
                                     <button
                                         onClick={() => setShowAnalytics(true)}
                                         style={{
