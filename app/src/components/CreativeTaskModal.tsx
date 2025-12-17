@@ -662,9 +662,10 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                             <div style={{
                                                                 width: 20, height: 20, borderRadius: '50%',
-                                                                background: '#3b82f6', color: 'white',
+                                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', color: 'white',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                fontSize: '0.7rem'
+                                                                fontSize: '0.7rem',
+                                                                boxShadow: '0 2px 4px rgba(236, 72, 153, 0.3)'
                                                             }}>
                                                                 {(p.full_name || 'U')[0].toUpperCase()}
                                                             </div>
@@ -771,11 +772,12 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                             padding: '0.5rem 1.5rem',
                             borderRadius: '6px',
                             border: 'none',
-                            background: '#3b82f6',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                             color: 'white',
                             fontWeight: '500',
                             cursor: loading ? 'not-allowed' : 'pointer',
-                            opacity: loading ? 0.7 : 1
+                            opacity: loading ? 0.7 : 1,
+                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
                         }}
                     >
                         {loading ? 'Saving...' : (taskToEdit ? 'Save Changes' : 'Create Task')}
@@ -788,11 +790,15 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
 }
 
 const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: 'var(--text-secondary)',
-    marginBottom: '0.5rem'
+    display: 'inline-block',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    marginBottom: '0.5rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
 }
 
 const inputStyle: React.CSSProperties = {
@@ -801,7 +807,8 @@ const inputStyle: React.CSSProperties = {
     borderRadius: '6px',
     border: '1px solid var(--border-color)',
     background: 'var(--bg-secondary)',
-    color: 'var(--text-primary)',
+    color: '#ffffff',
     fontSize: '0.875rem',
+    fontWeight: '500',
     outline: 'none'
 }

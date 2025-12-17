@@ -318,14 +318,14 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
 
     const getClientColor = (name: string) => {
         const colors = [
-            { bg: 'rgba(59, 130, 246, 0.1)', text: '#1d4ed8' }, // Blue 700
-            { bg: 'rgba(16, 185, 129, 0.1)', text: '#047857' }, // Green 700
-            { bg: 'rgba(236, 72, 153, 0.1)', text: '#be185d' }, // Pink 700
-            { bg: 'rgba(249, 115, 22, 0.1)', text: '#c2410c' }, // Orange 700
-            { bg: 'rgba(168, 85, 247, 0.1)', text: '#7e22ce' }, // Purple 700
-            { bg: 'rgba(239, 68, 68, 0.1)', text: '#b91c1c' }, // Red 700
-            { bg: 'rgba(14, 165, 233, 0.1)', text: '#0369a1' }, // Sky 700
-            { bg: 'rgba(245, 158, 11, 0.1)', text: '#b45309' }, // Amber 700
+            { bg: 'rgba(59, 130, 246, 0.1)', text: '#93c5fd' }, // Blue 300
+            { bg: 'rgba(16, 185, 129, 0.1)', text: '#86efac' }, // Green 300
+            { bg: 'rgba(236, 72, 153, 0.1)', text: '#f9a8d4' }, // Pink 300
+            { bg: 'rgba(249, 115, 22, 0.1)', text: '#fdba74' }, // Orange 300
+            { bg: 'rgba(168, 85, 247, 0.1)', text: '#d8b4fe' }, // Purple 300
+            { bg: 'rgba(239, 68, 68, 0.1)', text: '#fca5a5' }, // Red 300
+            { bg: 'rgba(14, 165, 233, 0.1)', text: '#7dd3fc' }, // Sky 300
+            { bg: 'rgba(245, 158, 11, 0.1)', text: '#fcd34d' }, // Amber 300
         ];
 
         // Simple hash to consistently pick a color
@@ -574,10 +574,11 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                     fontWeight: '500',
                                     fontSize: '0.875rem',
                                     cursor: 'pointer',
-                                    border: filterTimeRange === 'weekly' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                    background: filterTimeRange === 'weekly' ? 'var(--accent-color)' : 'transparent',
+                                    border: filterTimeRange === 'weekly' ? 'none' : '1px solid var(--border-color)',
+                                    background: filterTimeRange === 'weekly' ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'transparent',
                                     color: filterTimeRange === 'weekly' ? 'white' : 'var(--text-secondary)',
-                                    transition: 'all 0.2s',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: filterTimeRange === 'weekly' ? '0 2px 8px rgba(236, 72, 153, 0.3)' : 'none'
                                 }}
                             >
                                 Weekly
@@ -590,10 +591,11 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                     fontWeight: '500',
                                     fontSize: '0.875rem',
                                     cursor: 'pointer',
-                                    border: filterTimeRange === 'monthly' ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
-                                    background: filterTimeRange === 'monthly' ? 'var(--accent-color)' : 'transparent',
+                                    border: filterTimeRange === 'monthly' ? 'none' : '1px solid var(--border-color)',
+                                    background: filterTimeRange === 'monthly' ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'transparent',
                                     color: filterTimeRange === 'monthly' ? 'white' : 'var(--text-secondary)',
-                                    transition: 'all 0.2s',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: filterTimeRange === 'monthly' ? '0 2px 8px rgba(236, 72, 153, 0.3)' : 'none'
                                 }}
                             >
                                 Monthly
@@ -605,13 +607,14 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                                 padding: '0.5rem 1rem',
-                                background: '#3b82f6',
+                                background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                                 color: 'white',
                                 borderRadius: '6px',
                                 fontWeight: '500',
                                 fontSize: '0.875rem',
                                 border: 'none',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
                             }}>
                             <Plus size={16} /> New
                         </button>
@@ -815,7 +818,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                             {task.assignees && task.assignees.length > 0 ? (
                                                 task.assignees.map((assignee: any) => (
                                                     <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem' }}>
+                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', boxShadow: '0 2px 4px rgba(236, 72, 153, 0.3)' }}>
                                                             {(assignee.full_name || assignee.email || 'U')[0].toUpperCase()}
                                                         </div>
                                                         <span style={{ fontSize: '0.875rem' }}>{assignee.full_name || assignee.email}</span>
@@ -836,27 +839,20 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                                 borderRadius: '12px',
                                                 fontSize: '0.75rem',
                                                 fontWeight: '500',
+                                                background: 'transparent',
+                                                border: '1px solid rgba(255, 255, 255, 0.2)',
                                                 ...(() => {
                                                     const label = task.status?.label || 'Unknown'
                                                     const l = label.toLowerCase()
 
-                                                    // Using darker backgrounds (200/300 scale) for requested visibility
-                                                    if (l.includes('done') || l.includes('complete'))
-                                                        return { background: '#BBF7D0', color: '#14532D' } // Green-200
-
-                                                    if (l.includes('progress') || l.includes('going'))
-                                                        return { background: '#BFDBFE', color: '#1E3A8A' } // Blue-200
-
-                                                    if (l.includes('edit') || l.includes('review'))
-                                                        return { background: '#E9D5FF', color: '#581C87' } // Purple-200
-
-                                                    if (l.includes('todo') || l.includes('to do'))
-                                                        return { background: '#E2E8F0', color: '#334155' } // Slate-200
-
-                                                    if (l.includes('shoot'))
-                                                        return { background: '#FED7AA', color: '#7C2D12' } // Orange-200
-
-                                                    return { background: '#E5E7EB', color: '#1F2937' } // Gray-200
+                                                    if (l.includes('done') || l.includes('complete')) {
+                                                        return { color: '#4ade80', borderColor: 'rgba(74, 222, 128, 0.4)' } // Green
+                                                    }
+                                                    if (l.includes('progress') || l.includes('going') || l.includes('review') || l.includes('shoot')) {
+                                                        return { color: '#facc15', borderColor: 'rgba(250, 204, 21, 0.4)' } // Yellow
+                                                    }
+                                                    // Default / To Do
+                                                    return { color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.4)' } // Red
                                                 })()
                                             }}>
                                                 {task.status?.label || 'No Status'}
@@ -1120,8 +1116,15 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     {dayTasks.map(t => (
-                                                        <div key={t.id} style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem', borderRadius: '3px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderLeft: '2px solid #3b82f6', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }} title={t.title}>
-                                                            {t.title}
+                                                        <div key={t.id} style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', borderRadius: '4px', background: 'var(--bg-tertiary)', borderLeft: '2px solid #ec4899', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer', marginBottom: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }} title={t.title}>
+                                                            <span style={{
+                                                                background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                                                                WebkitBackgroundClip: 'text',
+                                                                WebkitTextFillColor: 'transparent',
+                                                                fontWeight: '600'
+                                                            }}>
+                                                                {t.title}
+                                                            </span>
                                                         </div>
                                                     ))}
                                                 </div>

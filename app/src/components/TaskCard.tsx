@@ -79,7 +79,21 @@ const TaskCard = React.memo(({ task, index }: TaskCardProps) => {
                                 </div>
                             )}
                             {task.priority && (
-                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem', borderRadius: '3px', background: task.priority === 'high' ? '#fee2e2' : task.priority === 'medium' ? '#fef3c7' : '#dcfce7', color: task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#16a34a' }}>
+                                <span style={{
+                                    fontSize: '0.65rem',
+                                    padding: '0.1rem 0.3rem',
+                                    borderRadius: '3px',
+                                    background: 'transparent',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    ...(() => {
+                                        switch (task.priority) {
+                                            case 'high': return { color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.4)' }
+                                            case 'medium': return { color: '#facc15', borderColor: 'rgba(250, 204, 21, 0.4)' }
+                                            case 'low': return { color: '#4ade80', borderColor: 'rgba(74, 222, 128, 0.4)' }
+                                            default: return { color: '#9ca3af', borderColor: 'rgba(156, 163, 175, 0.4)' }
+                                        }
+                                    })()
+                                }}>
                                     {task.priority}
                                 </span>
                             )}

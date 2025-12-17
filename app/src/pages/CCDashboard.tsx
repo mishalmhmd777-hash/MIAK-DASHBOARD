@@ -1069,10 +1069,10 @@ export default function CCDashboard() {
                                                         onClick={() => setShowAddEmployee(true)}
                                                         style={{
                                                             ...glassActionButtonStyle,
-                                                            background: 'linear-gradient(135deg, #059669, #10b981)',
+                                                            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                                                             color: 'white',
                                                             border: 'none',
-                                                            boxShadow: '0 4px 6px rgba(5, 150, 105, 0.2)'
+                                                            boxShadow: '0 4px 6px rgba(139, 92, 246, 0.2)'
                                                         }}
                                                     >
                                                         <UserPlus size={18} /> Add Employee

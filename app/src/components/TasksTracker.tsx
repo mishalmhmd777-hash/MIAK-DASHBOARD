@@ -416,8 +416,14 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                             borderRadius: '9999px',
                                             fontSize: '0.75rem',
                                             fontWeight: '600',
-                                            background: task.status?.color || '#e5e7eb',
-                                            color: '#374151'
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            ...(() => {
+                                                const label = (task.status?.label || '').toLowerCase();
+                                                if (label.includes('done') || label.includes('complete')) return { color: '#4ade80', borderColor: 'rgba(74, 222, 128, 0.4)' }
+                                                if (label.includes('progress')) return { color: '#facc15', borderColor: 'rgba(250, 204, 21, 0.4)' }
+                                                return { color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.4)' }
+                                            })()
                                         }}>
                                             {task.status?.label || 'No Status'}
                                         </span>
@@ -441,12 +447,14 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                             fontSize: '0.75rem',
                                             fontWeight: '600',
                                             textTransform: 'capitalize',
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255,255,255,0.2)',
                                             ...(() => {
                                                 switch (task.priority) {
-                                                    case 'high': return { background: '#fee2e2', color: '#dc2626' } // Red
-                                                    case 'medium': return { background: '#fef3c7', color: '#d97706' } // Amber/Yellow
-                                                    case 'low': return { background: '#dcfce7', color: '#16a34a' } // Green
-                                                    default: return { background: '#f3f4f6', color: '#6b7280' }
+                                                    case 'high': return { color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.4)' } // Red
+                                                    case 'medium': return { color: '#facc15', borderColor: 'rgba(250, 204, 21, 0.4)' } // Yellow
+                                                    case 'low': return { color: '#4ade80', borderColor: 'rgba(74, 222, 128, 0.4)' } // Green
+                                                    default: return { color: '#9ca3af', borderColor: 'rgba(156, 163, 175, 0.4)' }
                                                 }
                                             })()
                                         }}>

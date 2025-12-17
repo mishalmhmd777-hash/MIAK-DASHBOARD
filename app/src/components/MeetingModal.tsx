@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from './Modal'
-import { X, Briefcase, Link, MapPin, ChevronDown, ChevronUp, Search, Check } from 'lucide-react'
+import { Briefcase, Link, MapPin, ChevronDown, ChevronUp, Search, Check } from 'lucide-react'
 
 interface MeetingModalProps {
     isOpen: boolean
@@ -116,12 +116,7 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
             title="Schedule Meeting"
             maxWidth="600px"
         >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold' }}>Schedule Meeting</h2>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                    <X size={20} />
-                </button>
-            </div>
+            {/* Header removed as it is handled by the Modal component */}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
@@ -456,10 +451,12 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
 
 const labelStyle: React.CSSProperties = {
     display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: 'var(--text-secondary)',
-    marginBottom: '0.5rem'
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+    marginBottom: '0.5rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
 }
 
 const inputStyle: React.CSSProperties = {

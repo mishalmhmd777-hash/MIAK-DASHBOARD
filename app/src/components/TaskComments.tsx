@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Send, Edit2, Trash2 } from 'lucide-react'
+import { Send, Edit2, Trash2, MessageSquare } from 'lucide-react'
 
 interface Comment {
     id: string
@@ -162,12 +162,15 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                💬 Comments
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '400' }}>
-                    ({comments.length})
-                </span>
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+                <MessageSquare size={20} />
+                <h3 style={{ fontSize: '1rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Comments
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                        ({comments.length})
+                    </span>
+                </h3>
+            </div>
 
             {/* Comments List */}
             <div style={{ marginBottom: '1rem', maxHeight: '300px', overflowY: 'auto' }}>

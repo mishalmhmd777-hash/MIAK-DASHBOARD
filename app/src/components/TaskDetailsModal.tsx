@@ -149,7 +149,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     {/* Task Properties */}
                     <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem 1rem', alignItems: 'center', fontSize: '0.9rem', marginBottom: '2rem' }}>
                         {/* Status */}
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={labelStyle}>
                             <Layout size={16} /> Status
                         </div>
                         <div>
@@ -176,7 +176,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             </select>
                         </div>
                         {/* Priority */}
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={labelStyle}>
                             <Flag size={16} /> Priority
                         </div>
                         <div>
@@ -193,7 +193,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             </span>
                         </div>
                         {/* Assignee */}
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={labelStyle}>
                             <User size={16} /> Assignee
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -207,14 +207,14 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             ))}
                         </div>
                         {/* Start Date */}
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={labelStyle}>
                             <Clock size={16} /> Start Date
                         </div>
                         <div style={{ color: 'var(--text-primary)' }}>
                             {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'No start date'}
                         </div>
                         {/* Due Date */}
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={labelStyle}>
                             <Clock size={16} /> Due Date
                         </div>
                         <div style={{ color: 'var(--text-primary)' }}>
@@ -231,9 +231,9 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     {/* Subtasks Section */}
                     <div style={{ marginBottom: '3rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#374151' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)' }}>
                                 <CheckSquare size={20} />
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Subtasks</h3>
+                                <h3 style={{ fontSize: '1rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtasks</h3>
                             </div>
                             {progress > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -263,4 +263,15 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
             </div>
         </Modal>
     )
+}
+
+const labelStyle: React.CSSProperties = {
+    color: 'var(--text-primary)',
+    fontWeight: '700',
+    fontSize: '0.85rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem'
 }

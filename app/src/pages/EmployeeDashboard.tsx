@@ -542,7 +542,6 @@ export default function EmployeeDashboard() {
                     <div style={glassCardStyle}>
                         <TaskCalendar
                             tasks={tasks}
-                            statuses={statuses}
                             onEdit={(task) => {
                                 setSelectedTask(task)
                                 setIsTaskModalOpen(true)

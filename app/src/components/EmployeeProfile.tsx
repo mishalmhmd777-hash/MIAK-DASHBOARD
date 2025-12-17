@@ -265,7 +265,7 @@ export default function EmployeeProfile() {
                 <form onSubmit={handleSave}>
                     <div style={{ display: 'grid', gap: '1.5rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                            <label style={labelStyle}>
                                 Email Address
                             </label>
                             <input
@@ -285,7 +285,7 @@ export default function EmployeeProfile() {
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                            <label style={labelStyle}>
                                 Full Name
                             </label>
                             <input
@@ -303,8 +303,8 @@ export default function EmployeeProfile() {
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                                Department <Building2 size={14} style={{ display: 'inline', marginLeft: '0.25rem' }} />
+                            <label style={labelStyle}>
+                                Department <Building2 size={14} style={{ marginLeft: '0.25rem' }} />
                             </label>
                             <select
                                 value={departmentId}
@@ -349,4 +349,15 @@ export default function EmployeeProfile() {
             </div>
         </div>
     )
+}
+
+const labelStyle: React.CSSProperties = {
+    color: 'var(--text-primary)',
+    fontWeight: '700',
+    fontSize: '0.85rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '0.5rem',
+    display: 'flex',
+    alignItems: 'center'
 }

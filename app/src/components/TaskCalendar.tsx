@@ -25,11 +25,10 @@ interface Task {
 
 interface TaskCalendarProps {
     tasks: Task[]
-    statuses: any[]
     onEdit: (task: Task) => void
 }
 
-export default function TaskCalendar({ tasks, statuses, onEdit }: TaskCalendarProps) {
+export default function TaskCalendar({ tasks, onEdit }: TaskCalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date())
 
 
@@ -168,7 +167,6 @@ export default function TaskCalendar({ tasks, statuses, onEdit }: TaskCalendarPr
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', maxHeight: '100px' }}>
                             {dayTasks.map(task => {
-                                const status = statuses.find(s => s.id === task.status_id)
                                 return (
                                     <div
                                         key={task.id}
@@ -179,18 +177,24 @@ export default function TaskCalendar({ tasks, statuses, onEdit }: TaskCalendarPr
                                         style={{
                                             padding: '0.25rem 0.5rem',
                                             borderRadius: '0.25rem',
-                                            background: status?.color ? `${status.color}20` : 'var(--bg-tertiary)',
-                                            borderLeft: `3px solid ${status?.color || '#ccc'}`,
+                                            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                                             fontSize: '0.75rem',
                                             cursor: 'pointer',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            color: 'var(--text-primary)',
-                                            transition: 'filter 0.2s'
+                                            color: 'white',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(0.95)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.filter = 'none'}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-1px)'
+                                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)'
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)'
+                                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}
                                         title={task.title}
                                     >
                                         {task.title}

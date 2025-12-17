@@ -24,19 +24,19 @@
 
 [data-theme='dark'] {
     /* Dark Theme Variables */
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
+    --bg-primary: #000000;
+    --bg-secondary: #09090b;
+    --bg-tertiary: #18181b;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --accent-color: #818cf8;
     --danger-color: #f87171;
     --success-color: #34d399;
-    --sidebar-bg: #1e293b;
-    --border-color: #334155;
+    --sidebar-bg: #050505;
+    --border-color: #27272a;
 
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(0, 0, 0, 0.7);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 * {
