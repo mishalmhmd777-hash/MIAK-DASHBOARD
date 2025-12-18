@@ -7,9 +7,10 @@ interface MeetingModalProps {
     isOpen: boolean
     onClose: () => void
     onMeetingCreated: () => void
+    meetingToEdit?: any // Using any for flexibility or better strict type from Meetings.tsx
 }
 
-export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: MeetingModalProps) {
+export default function MeetingModal({ isOpen, onClose, onMeetingCreated, meetingToEdit }: MeetingModalProps) {
     const [title, setTitle] = useState('')
     const [clientId, setClientId] = useState('')
     const [description, setDescription] = useState('')
@@ -31,8 +32,25 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
         if (isOpen) {
             fetchClients()
             fetchProfiles()
+            if (meetingToEdit) {
+                // Populate form for editing
+                setTitle(meetingToEdit.title)
+                setClientId(meetingToEdit.client_id || '')
+                setDescription(meetingToEdit.description || '')
+                setStartTime(meetingToEdit.start_time ? new Date(meetingToEdit.start_time).toISOString().slice(0, 16) : '')
+                setEndTime(meetingToEdit.end_time ? new Date(meetingToEdit.end_time).toISOString().slice(0, 16) : '')
+                setPlatform(meetingToEdit.platform || 'Google Meet')
+                setMeetingLink(meetingToEdit.meeting_link || '')
+                // Fetch participants if needed, for simplicity we might skip prepopulating participants
+                // or assume we need to fetch them separately
+                if (meetingToEdit.meeting_participants) {
+                    setParticipants(meetingToEdit.meeting_participants.map((p: any) => p.user_id))
+                }
+            } else {
+                resetForm()
+            }
         }
-    }, [isOpen])
+    }, [isOpen, meetingToEdit])
 
     const fetchClients = async () => {
         const { data } = await supabase.from('clients').select('id, name')
@@ -49,48 +67,73 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
         setLoading(true)
 
         try {
-            const { data, error } = await supabase
-                .from('meetings')
-                .insert({
-                    title,
-                    client_id: clientId || null,
-                    description,
-                    start_time: new Date(startTime).toISOString(),
-                    end_time: new Date(endTime).toISOString(),
-                    platform,
-                    meeting_link: meetingLink
-                })
-                .select()
-                .single()
+            let data: any
+            let error: any
 
-            if (error) throw error
+            const meetingData = {
+                title,
+                client_id: clientId || null,
+                description,
+                start_time: new Date(startTime).toISOString(),
+                end_time: new Date(endTime).toISOString(),
+                platform,
+                meeting_link: meetingLink
+            }
 
-            // Add participants if any
-            if (participants.length > 0 && data) {
-                const participantData = participants.map(userId => ({
-                    meeting_id: data.id,
-                    user_id: userId
-                }))
+            if (meetingToEdit) {
+                // Update
+                const { data: updatedData, error: updateError } = await supabase
+                    .from('meetings')
+                    .update(meetingData)
+                    .eq('id', meetingToEdit.id)
+                    .select()
+                    .single()
 
-                const { error: partError } = await supabase
-                    .from('meeting_participants')
-                    .insert(participantData)
+                data = updatedData
+                error = updateError
+            } else {
+                // Create
+                const { data: newData, error: insertError } = await supabase
+                    .from('meetings')
+                    .insert(meetingData)
+                    .select()
+                    .single()
 
-                if (partError) {
-                    console.error('Error adding participants:', partError)
-                    // Don't throw here, meeting is already created, just log it.
-                }
+                data = newData
+                error = insertError
             }
 
             if (error) throw error
+
+            // Handle Participants
+            if (data) {
+                // For edit, simpler to delete all and re-insert or diff.
+                // Re-inserting is easiest for now.
+                if (meetingToEdit) {
+                    await supabase.from('meeting_participants').delete().eq('meeting_id', data.id)
+                }
+
+                if (participants.length > 0) {
+                    const participantData = participants.map(userId => ({
+                        meeting_id: data.id,
+                        user_id: userId
+                    }))
+
+                    const { error: partError } = await supabase
+                        .from('meeting_participants')
+                        .insert(participantData)
+
+                    if (partError) console.error('Error updating participants:', partError)
+                }
+            }
 
             onMeetingCreated()
             onClose()
             resetForm()
 
         } catch (error) {
-            console.error('Error creating meeting:', error)
-            alert('Failed to create meeting')
+            console.error('Error saving meeting:', error)
+            alert('Failed to save meeting')
         } finally {
             setLoading(false)
         }
@@ -120,7 +163,7 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
                     WebkitTextFillColor: 'transparent',
                     fontWeight: 'bold'
                 }}>
-                    Schedule Meeting
+                    {meetingToEdit ? "Edit Meeting" : "Schedule Meeting"}
                 </span>
             }
             maxWidth="600px"

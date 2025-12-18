@@ -5,7 +5,9 @@ import {
     Video,
     Link as LinkIcon,
     Plus,
-    Search
+    Search,
+    Pencil,
+    Trash2
 } from 'lucide-react'
 import MeetingModal from './MeetingModal'
 
@@ -21,19 +23,26 @@ interface Meeting {
     }
 }
 
+import { useAuth } from '../contexts/AuthContext'
+
 interface MeetingsProps {
     clientId?: string | null
+    filterByParticipant?: boolean
 }
 
-export default function Meetings({ clientId }: MeetingsProps) {
+export default function Meetings({ clientId, filterByParticipant = false }: MeetingsProps) {
+    const { user } = useAuth()
     const [meetings, setMeetings] = useState<Meeting[]>([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [meetingToEdit, setMeetingToEdit] = useState<Meeting | null>(null)
 
     useEffect(() => {
-        fetchMeetings()
-    }, [])
+        if (user) {
+            fetchMeetings()
+        }
+    }, [user, clientId])
 
     const fetchMeetings = async () => {
         setLoading(true)
@@ -42,12 +51,17 @@ export default function Meetings({ clientId }: MeetingsProps) {
                 .from('meetings')
                 .select(`
                     *,
-                    client:clients(name)
+                    client:clients(name),
+                    meeting_participants${filterByParticipant ? '!inner' : ''}(user_id)
                 `)
                 .order('start_time', { ascending: true })
 
             if (clientId) {
                 query = query.eq('client_id', clientId)
+            }
+
+            if (filterByParticipant && user) {
+                query = query.eq('meeting_participants.user_id', user.id)
             }
 
             const { data, error } = await query
@@ -59,6 +73,35 @@ export default function Meetings({ clientId }: MeetingsProps) {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!confirm('Are you sure you want to delete this meeting?')) return
+
+        try {
+            const { error } = await supabase
+                .from('meetings')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+            fetchMeetings()
+        } catch (error) {
+            console.error('Error deleting meeting:', error)
+            alert('Failed to delete meeting')
+        }
+    }
+
+    const handleEdit = (meeting: Meeting, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setMeetingToEdit(meeting)
+        setIsModalOpen(true)
+    }
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false)
+        setMeetingToEdit(null)
     }
 
     const filteredMeetings = meetings.filter(m =>
@@ -102,7 +145,10 @@ export default function Meetings({ clientId }: MeetingsProps) {
                         />
                     </div>
                     <button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => {
+                            setMeetingToEdit(null)
+                            setIsModalOpen(true)
+                        }}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '0.5rem',
                             padding: '0.625rem 1rem',
@@ -216,6 +262,44 @@ export default function Meetings({ clientId }: MeetingsProps) {
                                                 </button>
                                             )}
                                         </div>
+
+                                        {/* Edit/Delete Actions */}
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                onClick={(e) => handleEdit(meeting, e)}
+                                                title="Edit Meeting"
+                                                style={{
+                                                    padding: '0.5rem',
+                                                    background: 'transparent',
+                                                    color: 'var(--text-secondary)',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '6px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                            >
+                                                <Pencil size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleDelete(meeting.id, e)}
+                                                title="Delete Meeting"
+                                                style={{
+                                                    padding: '0.5rem',
+                                                    background: 'transparent',
+                                                    color: 'var(--danger-color, #ef4444)',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '6px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -226,8 +310,9 @@ export default function Meetings({ clientId }: MeetingsProps) {
 
             <MeetingModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={handleCloseModal}
                 onMeetingCreated={fetchMeetings}
+                meetingToEdit={meetingToEdit}
             />
         </div>
     )

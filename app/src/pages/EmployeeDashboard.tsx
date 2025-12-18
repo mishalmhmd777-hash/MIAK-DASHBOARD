@@ -517,8 +517,8 @@ export default function EmployeeDashboard() {
                 ) : viewMode === 'profile' ? (
                     <EmployeeProfile />
                 ) : viewMode === 'meetings' ? (
-                    <div style={{ height: 'calc(100vh - 200px)', overflow: 'hidden' }}>
-                        <Meetings />
+                    <div style={{ padding: '2rem', overflowY: 'auto', height: '100%' }}>
+                        <Meetings filterByParticipant={true} />
                     </div>
                 ) : tasks.length === 0 ? (
                     <div style={{

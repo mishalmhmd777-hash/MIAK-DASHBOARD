@@ -45,12 +45,7 @@ interface Client {
     created_at: string
 }
 
-interface Workspace {
-    id: string
-    client_id: string
-    name: string
-    created_at: string
-}
+
 
 interface Department {
     id: string
@@ -74,8 +69,7 @@ export default function CCDashboard() {
     const [profile, setProfile] = useState<Profile | null>(null)
     const [clients, setClients] = useState<Client[]>([])
     const [selectedClient, setSelectedClient] = useState<string | null>(null)
-    const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-    const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null)
+
     const [departments, setDepartments] = useState<Department[]>([])
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
@@ -83,12 +77,12 @@ export default function CCDashboard() {
 
     // Form states
     const [showAddClient, setShowAddClient] = useState(false)
-    const [showAddWorkspace, setShowAddWorkspace] = useState(false)
+
     const [showAddDepartment, setShowAddDepartment] = useState(false)
     const [showAddEmployee, setShowAddEmployee] = useState(false)
 
     const [clientName, setClientName] = useState('')
-    const [workspaceName, setWorkspaceName] = useState('')
+
     const [departmentName, setDepartmentName] = useState('')
     const [empFullName, setEmpFullName] = useState('')
     const [empEmail, setEmpEmail] = useState('')
@@ -104,7 +98,7 @@ export default function CCDashboard() {
     const [showAnalytics, setShowAnalytics] = useState(false)
     const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
     const [editingClient, setEditingClient] = useState<Client | null>(null)
-    const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null)
+
     const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
 
     const handleSignOut = async () => {
@@ -272,17 +266,11 @@ export default function CCDashboard() {
 
     useEffect(() => {
         if (selectedClient) {
-            loadWorkspaces(selectedClient)
-            setSelectedWorkspace(null)
-            setDepartments([])
+            loadClientDepartments(selectedClient)
         }
     }, [selectedClient])
 
-    useEffect(() => {
-        if (selectedWorkspace) {
-            loadDepartments(selectedWorkspace)
-        }
-    }, [selectedWorkspace])
+    // Removed the selectedWorkspace dependency useEffect since we load all departments for the client now
 
     const loadProfile = async () => {
         if (!user) return
@@ -318,7 +306,7 @@ export default function CCDashboard() {
                 // 2. Create Workspace
                 const { data: newWorkspace, error: workspaceError } = await supabase
                     .from('workspaces')
-                    .insert({ name: 'Demo Workspace', client_id: newClient.id })
+                    .insert({ name: 'General', client_id: newClient.id })
                     .select()
                     .single()
 
@@ -347,21 +335,39 @@ export default function CCDashboard() {
         }
     }
 
-    const loadWorkspaces = async (clientId: string) => {
-        const { data } = await supabase
-            .from('workspaces')
-            .select('*')
-            .eq('client_id', clientId)
-            .order('created_at', { ascending: false })
-        setWorkspaces(data || [])
-    }
 
-    const loadDepartments = async (workspaceId: string) => {
-        const { data } = await supabase
+
+    const loadClientDepartments = async (clientId: string) => {
+        // 1. Get all workspace IDs for this client
+        const { data: workspaceData, error: wsError } = await supabase
+            .from('workspaces')
+            .select('id')
+            .eq('client_id', clientId)
+
+        if (wsError) {
+            console.error('Error loading workspaces for departments:', wsError)
+            return
+        }
+
+        const workspaceIds = workspaceData?.map(ws => ws.id) || []
+
+        if (workspaceIds.length === 0) {
+            setDepartments([])
+            return
+        }
+
+        // 2. Get departments for these workspaces
+        const { data, error } = await supabase
             .from('departments')
             .select('*')
-            .eq('workspace_id', workspaceId)
+            .in('workspace_id', workspaceIds)
             .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Error loading departments:', error)
+            return
+        }
+
         setDepartments(data || [])
     }
 
@@ -412,14 +418,20 @@ export default function CCDashboard() {
             logActivity('update_client', `updated client: ${clientName}`)
             createNotification('Client Updated', `Successfully updated client: ${clientName}`, 'success')
         } else {
-            const { error } = await supabase
+            const { data: newClient, error } = await supabase
                 .from('clients')
                 .insert({ name: clientName, cc_id: user?.id })
+                .select()
+                .single()
 
             if (error) {
                 setError(error.message)
                 return
             }
+
+            // Auto-create General workspace
+            await supabase.from('workspaces').insert({ name: 'General', client_id: newClient.id })
+
             logActivity('create_client', `added a new client: ${clientName}`)
             createNotification('Client Added', `Successfully added client: ${clientName}`, 'success')
         }
@@ -445,73 +457,17 @@ export default function CCDashboard() {
             createNotification('Client Deleted', 'Successfully deleted client', 'success')
             if (selectedClient === id) {
                 setSelectedClient(null)
-                setWorkspaces([])
                 setDepartments([])
             }
             loadClients()
         }
     }
 
-    const handleSaveWorkspace = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!selectedClient && !editingWorkspace) return
-        setError(null)
 
-        if (editingWorkspace) {
-            const { error } = await supabase
-                .from('workspaces')
-                .update({ name: workspaceName })
-                .eq('id', editingWorkspace.id)
-
-            if (error) {
-                setError(error.message)
-                return
-            }
-            logActivity('update_workspace', `updated workspace: ${workspaceName}`)
-            createNotification('Workspace Updated', `Successfully updated workspace: ${workspaceName}`, 'success')
-        } else {
-            const { error } = await supabase
-                .from('workspaces')
-                .insert({ name: workspaceName, client_id: selectedClient })
-
-            if (error) {
-                setError(error.message)
-                return
-            }
-            logActivity('create_workspace', `added a new workspace: ${workspaceName}`)
-            createNotification('Workspace Added', `Successfully added workspace: ${workspaceName}`, 'success')
-        }
-
-        setWorkspaceName('')
-        setEditingWorkspace(null)
-        setShowAddWorkspace(false)
-        if (selectedClient) loadWorkspaces(selectedClient)
-    }
-
-    const handleDeleteWorkspace = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this workspace? This will delete all associated departments and tasks.')) return
-
-        const { error } = await supabase
-            .from('workspaces')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-            alert('Error deleting workspace: ' + error.message)
-        } else {
-            logActivity('delete_workspace', 'deleted a workspace')
-            createNotification('Workspace Deleted', 'Successfully deleted workspace', 'success')
-            if (selectedWorkspace === id) {
-                setSelectedWorkspace(null)
-                setDepartments([])
-            }
-            if (selectedClient) loadWorkspaces(selectedClient)
-        }
-    }
 
     const handleSaveDepartment = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedWorkspace && !editingDepartment) return
+        if (!selectedClient && !editingDepartment) return
         setError(null)
 
         if (editingDepartment) {
@@ -527,9 +483,35 @@ export default function CCDashboard() {
             logActivity('update_department', `updated department: ${departmentName}`)
             createNotification('Department Updated', `Successfully updated department: ${departmentName}`, 'success')
         } else {
+            // Find or create workspace
+            let targetWorkspaceId
+
+            // First try to find existing workspace (e.g. "General" or any other)
+            const { data: existingWs } = await supabase
+                .from('workspaces')
+                .select('id')
+                .eq('client_id', selectedClient)
+                .limit(1)
+
+            if (existingWs && existingWs.length > 0) {
+                targetWorkspaceId = existingWs[0].id
+            } else {
+                const { data: newWs, error: wsError } = await supabase
+                    .from('workspaces')
+                    .insert({ name: 'General', client_id: selectedClient })
+                    .select()
+                    .single()
+
+                if (wsError) {
+                    setError('Failed to create default workspace: ' + wsError.message)
+                    return
+                }
+                targetWorkspaceId = newWs.id
+            }
+
             const { error } = await supabase
                 .from('departments')
-                .insert({ name: departmentName, workspace_id: selectedWorkspace })
+                .insert({ name: departmentName, workspace_id: targetWorkspaceId })
 
             if (error) {
                 setError(error.message)
@@ -542,7 +524,7 @@ export default function CCDashboard() {
         setDepartmentName('')
         setEditingDepartment(null)
         setShowAddDepartment(false)
-        if (selectedWorkspace) loadDepartments(selectedWorkspace)
+        if (selectedClient) loadClientDepartments(selectedClient)
     }
 
     const handleDeleteDepartment = async (id: string) => {
@@ -561,7 +543,7 @@ export default function CCDashboard() {
             if (selectedDepartment === id) {
                 setSelectedDepartment(null)
             }
-            if (selectedWorkspace) loadDepartments(selectedWorkspace)
+            if (selectedClient) loadClientDepartments(selectedClient)
         }
     }
 
@@ -751,9 +733,7 @@ export default function CCDashboard() {
         client.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const filteredWorkspaces = workspaces.filter(ws =>
-        ws.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+
 
     const filteredDepartments = departments.filter(dept =>
         dept.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -903,7 +883,6 @@ export default function CCDashboard() {
                                 }}>
                                     {[
                                         { label: 'Total Clients', value: clients.length, icon: Users, color: '#4f46e5', bg: '#eef2ff' },
-                                        { label: 'Active Workspaces', value: workspaces.length, icon: Briefcase, color: '#0891b2', bg: '#ecfeff' },
                                         { label: 'Departments', value: departments.length, icon: Building2, color: '#ea580c', bg: '#fff7ed' },
                                         { label: 'Total Employees', value: employees.length, icon: UserPlus, color: '#059669', bg: '#ecfdf5' },
                                     ].map((stat, i) => (
@@ -938,7 +917,7 @@ export default function CCDashboard() {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '2rem', alignItems: 'start' }}>
                                     {/* Left Column: Workspaces & Employees */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                        {/* Workspaces Section Moved Here */}
+                                        {/* Departments Section */}
                                         {selectedClient ? (
                                             <div style={{ ...glassCardStyle, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
                                                 <div style={{
@@ -950,91 +929,41 @@ export default function CCDashboard() {
                                                     background: 'var(--bg-primary)',
                                                 }}>
                                                     <h2 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="text-gradient">
-                                                        <Briefcase size={18} style={{ color: 'var(--accent-color)' }} /> Workspaces
+                                                        <Building2 size={18} style={{ color: 'var(--accent-color)' }} /> Departments
                                                     </h2>
-                                                    <button onClick={() => setShowAddWorkspace(true)} style={glassActionButtonStyle}>
+                                                    <button onClick={() => setShowAddDepartment(true)} style={glassActionButtonStyle}>
                                                         <Plus size={16} /> Add
                                                     </button>
                                                 </div>
-                                                <div style={{ padding: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
-                                                    {filteredWorkspaces.length === 0 ? (
-                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No workspaces found in this client.</div>
+                                                <div style={{ padding: '1rem', maxHeight: '500px', overflowY: 'auto' }}>
+                                                    {filteredDepartments.length === 0 ? (
+                                                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No departments found.</div>
                                                     ) : (
-                                                        filteredWorkspaces.map((ws) => (
-                                                            <div key={ws.id} style={{ marginBottom: '0.5rem' }}>
-                                                                <div
-                                                                    onClick={() => setSelectedWorkspace(ws.id)}
-                                                                    style={{
-                                                                        padding: '1rem',
-                                                                        borderRadius: '0.8rem',
-                                                                        cursor: 'pointer',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'space-between',
-                                                                        background: selectedWorkspace === ws.id ? 'linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(6, 182, 212, 0.1))' : 'transparent',
-                                                                        border: selectedWorkspace === ws.id ? '1px solid rgba(8, 145, 178, 0.2)' : '1px solid transparent',
-                                                                        color: selectedWorkspace === ws.id ? '#0891b2' : 'var(--text-primary)',
-                                                                        fontWeight: selectedWorkspace === ws.id ? '600' : '500',
-                                                                        transition: 'all 0.2s',
-                                                                    }}
-                                                                >
-                                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{ws.name}</span>
+                                                        filteredDepartments.map((dept) => (
+                                                            <div
+                                                                key={dept.id}
+                                                                style={{
+                                                                    padding: '1rem',
+                                                                    borderRadius: '0.8rem',
+                                                                    background: 'var(--bg-secondary)',
+                                                                    marginBottom: '0.75rem',
+                                                                    border: 'var(--glass-border)',
+                                                                    transition: 'transform 0.2s',
+                                                                }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                                            >
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.95rem' }}>{dept.name}</span>
                                                                     <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                                        <button onClick={(e) => { e.stopPropagation(); setEditingWorkspace(ws); setWorkspaceName(ws.name); setShowAddWorkspace(true); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}><Pencil size={14} /></button>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws.id); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)' }}><Trash2 size={14} /></button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); setEditingDepartment(dept); setDepartmentName(dept.name); setShowAddDepartment(true); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}><Pencil size={14} /></button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteDepartment(dept.id); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)' }}><Trash2 size={14} /></button>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* Departments Section Nested */}
-                                                                {selectedWorkspace === ws.id && (
-                                                                    <div style={{ ...glassCardStyle, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out', marginTop: '0.5rem', marginLeft: '0.5rem', borderLeft: '2px solid rgba(8, 145, 178, 0.2)' }}>
-                                                                        <div style={{
-                                                                            padding: '1rem',
-                                                                            borderBottom: 'var(--glass-border)',
-                                                                            display: 'flex',
-                                                                            justifyContent: 'space-between',
-                                                                            alignItems: 'center',
-                                                                            background: 'var(--bg-primary)',
-                                                                        }}>
-                                                                            <h2 style={{ fontSize: '1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="text-gradient">
-                                                                                <Building2 size={16} style={{ color: 'var(--accent-color)' }} /> Departments
-                                                                            </h2>
-                                                                            <button onClick={() => setShowAddDepartment(true)} style={glassActionButtonStyle}>
-                                                                                <Plus size={14} /> Add
-                                                                            </button>
-                                                                        </div>
-                                                                        <div style={{ padding: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
-                                                                            {filteredDepartments.length === 0 ? (
-                                                                                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No departments.</div>
-                                                                            ) : (
-                                                                                filteredDepartments.map((dept) => (
-                                                                                    <div
-                                                                                        key={dept.id}
-                                                                                        style={{
-                                                                                            padding: '0.75rem',
-                                                                                            borderRadius: '0.6rem',
-                                                                                            background: 'var(--bg-primary)',
-                                                                                            marginBottom: '0.5rem',
-                                                                                            border: 'var(--glass-border)',
-                                                                                        }}
-                                                                                    >
-                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                                                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.9rem' }}>{dept.name}</span>
-                                                                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                                                                <button onClick={(e) => { e.stopPropagation(); setEditingDepartment(dept); setDepartmentName(dept.name); setShowAddDepartment(true); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)' }}><Pencil size={12} /></button>
-                                                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteDepartment(dept.id); }} style={{ padding: '0.25rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)' }}><Trash2 size={12} /></button>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                                                                            <button onClick={() => handleOpenAssignEmployees(dept.id)} style={{ ...glassActionButtonStyle, fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}><UserPlus size={12} /> Assign</button>
-                                                                                            <button onClick={() => { setSelectedDepartment(dept.id); loadDepartmentEmployees(dept.id); setShowDepartmentTasks(true); }} style={{ ...glassActionButtonStyle, fontSize: '0.75rem', padding: '0.3rem 0.6rem', color: 'var(--accent-color)' }}><ClipboardList size={12} /> Tasks</button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
+                                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                    <button onClick={() => handleOpenAssignEmployees(dept.id)} style={{ ...glassActionButtonStyle, fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}><UserPlus size={14} /> Assign Teams</button>
+                                                                    <button onClick={() => { setSelectedDepartment(dept.id); loadDepartmentEmployees(dept.id); setShowDepartmentTasks(true); }} style={{ ...glassActionButtonStyle, fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: 'var(--accent-color)' }}><ClipboardList size={14} /> Tasks</button>
+                                                                </div>
                                                             </div>
                                                         ))
                                                     )}
@@ -1044,7 +973,7 @@ export default function CCDashboard() {
                                             <div style={{ ...glassCardStyle, padding: '3rem', textAlign: 'center', border: '2px dashed var(--glass-border)' }}>
                                                 <Briefcase size={48} style={{ margin: '0 auto 1rem', color: 'var(--text-secondary)', opacity: 0.5 }} />
                                                 <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }} className="text-gradient">No Client Selected</h3>
-                                                <p style={{ color: 'var(--text-secondary)' }}>Select a client from the sidebar to view workspaces.</p>
+                                                <p style={{ color: 'var(--text-secondary)' }}>Select a client from the sidebar to view departments.</p>
                                             </div>
                                         )}
 
@@ -1235,29 +1164,7 @@ export default function CCDashboard() {
                             </form>
                         </Modal>
 
-                        <Modal
-                            isOpen={showAddWorkspace}
-                            onClose={() => { setShowAddWorkspace(false); setEditingWorkspace(null); setWorkspaceName(''); }}
-                            title={<h3 style={{
-                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
-                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                width: 'fit-content'
-                            }}>{editingWorkspace ? "Edit Workspace" : "Add New Workspace"}</h3>}
-                        >
-                            <form onSubmit={handleSaveWorkspace}>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Workspace Name</label>
-                                    <input type="text" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="e.g. Marketing" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                    <button type="button" onClick={() => setShowAddWorkspace(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingWorkspace ? 'Update' : 'Create'}</button>
-                                </div>
-                            </form>
-                        </Modal>
+
 
                         <Modal
                             isOpen={showAddDepartment}
