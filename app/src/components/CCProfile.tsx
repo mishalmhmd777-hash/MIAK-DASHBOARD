@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Save, Loader2, Camera } from 'lucide-react'
+import { User, Save, Loader2, Camera, Briefcase } from 'lucide-react'
 
 // Reuse the glassmorphism styles from Dashboard
 const glassCardStyle = {
@@ -140,7 +140,7 @@ export default function CCProfile() {
                         <div
                             style={{
                                 width: '100px', height: '100px', borderRadius: '50%',
-                                background: avatarUrl ? `url(${avatarUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #6366f1, #a855f7)',
+                                background: avatarUrl ? `url(${avatarUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 boxShadow: '0 8px 16px rgba(99, 102, 241, 0.3)',
                                 border: '4px solid rgba(255, 255, 255, 0.2)'
@@ -171,9 +171,33 @@ export default function CCProfile() {
                             style={{ display: 'none' }}
                         />
                     </div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                    <h2 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: '700',
+                        marginBottom: '0.5rem',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content',
+                        margin: '0 auto 0.5rem auto'
+                    }}>
                         My Profile
                     </h2>
+                    <p className="text-gradient" style={{
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        <Briefcase size={32} style={{ color: '#ec4899' }} /> Client Coordinator
+                    </p>
                     <p style={{ color: 'var(--text-secondary)' }}>
                         Manage your personal information
                     </p>
@@ -193,7 +217,14 @@ export default function CCProfile() {
                 <form onSubmit={handleSave}>
                     <div style={{ display: 'grid', gap: '1.5rem' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                            <label style={{
+                                display: 'block', marginBottom: '0.5rem', fontWeight: '700',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>
                                 Email Address
                             </label>
                             <input
@@ -213,7 +244,14 @@ export default function CCProfile() {
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                            <label style={{
+                                display: 'block', marginBottom: '0.5rem', fontWeight: '700',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>
                                 Full Name
                             </label>
                             <input
@@ -237,7 +275,7 @@ export default function CCProfile() {
                                 style={{
                                     width: '100%', padding: '1rem',
                                     borderRadius: '0.8rem', border: 'none',
-                                    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                                    background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                                     color: 'white', fontWeight: '600', fontSize: '1rem',
                                     cursor: saving ? 'wait' : 'pointer',
                                     display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem',

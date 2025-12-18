@@ -28,8 +28,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
     // Status State
     const [statusId, setStatusId] = useState('')
     const [statuses, setStatuses] = useState<any[]>([])
-    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
-    const statusDropdownRef = useRef<HTMLDivElement>(null)
+
 
     // Data for dropdowns
     const [profiles, setProfiles] = useState<any[]>([])
@@ -45,9 +44,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
             if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
                 setIsClientDropdownOpen(false)
             }
-            if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-                setIsStatusDropdownOpen(false)
-            }
+
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -433,76 +430,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                     {/* Content Type & Assignments */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-                        {/* Status */}
-                        <div>
-                            <label style={labelStyle}>Status</label>
-                            <div ref={statusDropdownRef} style={{ position: 'relative' }}>
-                                <div
-                                    onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                                    style={{
-                                        ...inputStyle,
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <span style={{ color: statusId ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                                        {statusId
-                                            ? statuses.find(s => s.id === statusId)?.label || 'Select Status'
-                                            : 'Select Status'
-                                        }
-                                    </span>
-                                    <ChevronDown size={14} style={{ color: 'var(--text-secondary)' }} />
-                                </div>
 
-                                {isStatusDropdownOpen && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        right: 0,
-                                        zIndex: 50,
-                                        marginTop: '0.25rem',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '6px',
-                                        background: 'var(--bg-secondary)',
-                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                    }}>
-                                        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                            {statuses.length === 0 ? (
-                                                <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No statuses found</div>
-                                            ) : (
-                                                statuses.map((status: any) => (
-                                                    <div
-                                                        key={status.id}
-                                                        onClick={() => {
-                                                            setStatusId(status.id)
-                                                            setIsStatusDropdownOpen(false)
-                                                        }}
-                                                        style={{
-                                                            padding: '0.5rem 0.75rem',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.875rem',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            background: statusId === status.id ? 'var(--bg-tertiary)' : 'transparent',
-                                                            color: 'var(--text-primary)'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                                        onMouseLeave={(e) => statusId !== status.id && (e.currentTarget.style.background = 'transparent')}
-                                                    >
-                                                        <span>{status.label}</span>
-                                                        {statusId === status.id && <Check size={14} className="text-blue-500" />}
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
 
                         {/* Content Type */}
                         <div>
@@ -665,7 +593,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                                                                 background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', color: 'white',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                                 fontSize: '0.7rem',
-                                                                boxShadow: '0 2px 4px rgba(236, 72, 153, 0.3)'
+                                                                boxShadow: 'none'
                                                             }}>
                                                                 {(p.full_name || 'U')[0].toUpperCase()}
                                                             </div>
@@ -777,7 +705,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                             fontWeight: '500',
                             cursor: loading ? 'not-allowed' : 'pointer',
                             opacity: loading ? 0.7 : 1,
-                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+                            boxShadow: 'none'
                         }}
                     >
                         {loading ? 'Saving...' : (taskToEdit ? 'Save Changes' : 'Create Task')}

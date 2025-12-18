@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { User, Flag, Clock, Layout, CheckSquare } from 'lucide-react'
+import { User, Flag, Clock, Layout, CheckSquare, Briefcase } from 'lucide-react'
 import Modal from './Modal'
 import RichTextEditor from './RichTextEditor'
 import TaskComments from './TaskComments'
@@ -14,6 +14,7 @@ interface TaskDetailsModalProps {
     isCoordinator?: boolean
 }
 
+// TaskDetailsModal component
 export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: TaskDetailsModalProps) {
     // Data State
     const [subtasksContent, setSubtasksContent] = useState('')
@@ -71,15 +72,25 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
         const allTodos = doc.querySelectorAll('li[data-type="taskItem"]')
         const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
 
-        if (allTodos.length > 0 && allTodos.length === completedTodos.length) {
-            // Find 'Done' status
-            const doneStatus = statuses.find(s =>
-                s.label.toLowerCase().includes('done') ||
-                s.label.toLowerCase().includes('complete') ||
-                s.label.toLowerCase().includes('finish')
-            )
-            if (doneStatus && task.status_id !== doneStatus.id) {
-                newStatusId = doneStatus.id
+        if (allTodos.length > 0) {
+            let targetStatusId = undefined
+
+            if (completedTodos.length === 0) {
+                // 0 checked -> To Do
+                const s = statuses.find(s => /to\s?do|backlog|pending|open|not started/i.test(s.label))
+                if (s) targetStatusId = s.id
+            } else if (completedTodos.length === allTodos.length) {
+                // All checked -> Done
+                const s = statuses.find(s => /done|complete|resolved|closed|finish/i.test(s.label))
+                if (s) targetStatusId = s.id
+            } else {
+                // Some checked -> In Progress
+                const s = statuses.find(s => /progress|review|doing|working/i.test(s.label))
+                if (s) targetStatusId = s.id
+            }
+
+            if (targetStatusId && task.status_id !== targetStatusId) {
+                newStatusId = targetStatusId
             }
         }
 
@@ -135,12 +146,15 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                             style={{
                                 fontSize: '2.5rem',
                                 fontWeight: '700',
-                                color: 'var(--text-primary)',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content',
                                 border: 'none',
                                 outline: 'none',
-                                width: '100%',
-                                background: 'transparent',
-                                marginBottom: '0.5rem'
+                                marginBottom: '0.5rem',
+                                caretColor: '#ec4899'
                             }}
                             placeholder="Task Title"
                         />
@@ -158,13 +172,20 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                                 onChange={(e) => handleUpdateStatus(e.target.value)}
                                 style={{
                                     background: 'var(--bg-tertiary)',
-                                    color: 'var(--text-primary)',
+                                    color: (() => {
+                                        const currentStatus = statuses.find(s => s.id === task.status_id)
+                                        const label = currentStatus?.label?.toLowerCase() || ''
+                                        if (label.includes('done') || label.includes('complete') || label.includes('finish')) return '#22c55e' // Green
+                                        if (label.includes('progress') || label.includes('review')) return '#3b82f6' // Blue
+                                        return 'var(--text-primary)' // Default/White
+                                    })(),
                                     padding: '0.125rem 0.5rem',
                                     borderRadius: '0.25rem',
                                     fontSize: '0.85rem',
                                     border: '1px solid var(--border-color)',
                                     cursor: 'pointer',
-                                    outline: 'none'
+                                    outline: 'none',
+                                    fontWeight: '600'
                                 }}
                             >
                                 <option value="" disabled>Select Status</option>
@@ -192,32 +213,46 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                                 {task.priority || 'Medium'}
                             </span>
                         </div>
-                        {/* Assignee */}
+                        {/* Assignees */}
                         <div style={labelStyle}>
-                            <User size={16} /> Assignee
+                            <User size={16} /> Assignees
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            {task.assignments?.map((assignment: any) => (
-                                <div key={assignment.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: '600', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                                        {(assignment.user?.full_name || assignment.user?.email || '?').charAt(0).toUpperCase()}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            {task.assignments?.length > 0 ? (
+                                task.assignments.map((assignment: any) => (
+                                    <div key={assignment.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--bg-tertiary)', padding: '2px 8px 2px 2px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold', color: 'white' }}>
+                                            {(assignment.user?.full_name || assignment.user?.email || '?').charAt(0).toUpperCase()}
+                                        </div>
+                                        <span style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>{assignment.user?.full_name || 'Unknown'}</span>
                                     </div>
-                                    <span style={{ color: 'var(--text-primary)' }}>{assignment.user?.full_name || 'Unknown'}</span>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Unassigned</span>
+                            )}
+                        </div>
+                        {/* Content Type */}
+                        <div style={labelStyle}>
+                            <Briefcase size={16} /> Content Type
+                        </div>
+                        <div style={{ color: 'var(--text-primary)', fontWeight: '500', textTransform: 'capitalize' }}>
+                            {task.content_type || 'N/A'}
                         </div>
                         {/* Start Date */}
                         <div style={labelStyle}>
                             <Clock size={16} /> Start Date
                         </div>
-                        <div style={{ color: 'var(--text-primary)' }}>
+                        <div style={{ color: '#22c55e', fontWeight: '500' }}>
                             {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'No start date'}
                         </div>
                         {/* Due Date */}
                         <div style={labelStyle}>
                             <Clock size={16} /> Due Date
                         </div>
-                        <div style={{ color: 'var(--text-primary)' }}>
+                        <div style={{
+                            color: '#ef4444',
+                            fontWeight: '500'
+                        }}>
                             {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
                         </div>
                     </div>
@@ -232,15 +267,26 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     <div style={{ marginBottom: '3rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)' }}>
-                                <CheckSquare size={20} />
-                                <h3 style={{ fontSize: '1rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtasks</h3>
+                                <CheckSquare size={20} style={{ color: '#ec4899' }} />
+                                <h3 style={{
+                                    fontSize: '1rem',
+                                    fontWeight: '700',
+                                    margin: 0,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
+                                    width: 'fit-content'
+                                }}>Subtasks</h3>
                             </div>
                             {progress > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '100px', height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
-                                        <div style={{ width: `${progress}%`, height: '100%', background: '#4f46e5', transition: 'width 0.3s' }} />
+                                    <div style={{ width: '100px', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', transition: 'width 0.3s' }} />
                                     </div>
-                                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#4f46e5' }}>{progress}%</span>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ec4899' }}>{progress}%</span>
                                 </div>
                             )}
                         </div>
@@ -266,7 +312,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
 }
 
 const labelStyle: React.CSSProperties = {
-    color: 'var(--text-primary)',
+    color: 'var(--text-primary)', // Keeping it clear/white/primary as requested for "suitable colors"
     fontWeight: '700',
     fontSize: '0.85rem',
     textTransform: 'uppercase',

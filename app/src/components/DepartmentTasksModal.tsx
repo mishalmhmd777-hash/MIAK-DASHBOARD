@@ -384,7 +384,16 @@ export default function DepartmentTasksModal({
             bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
         >
             <div style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Tasks - {departmentName}</h2>
+                <h2 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    margin: 0,
+                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    width: 'fit-content'
+                }}>Tasks - {departmentName}</h2>
             </div>
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
@@ -501,14 +510,26 @@ export default function DepartmentTasksModal({
                                             }}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>{task.title}</h4>
+                                                <h4 style={{
+                                                    margin: 0,
+                                                    fontSize: '0.95rem',
+                                                    fontWeight: '700',
+                                                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    backgroundClip: 'text',
+                                                    width: 'fit-content'
+                                                }}>{task.title}</h4>
                                                 <span style={{
                                                     fontSize: '0.7rem',
                                                     padding: '0.125rem 0.5rem',
                                                     borderRadius: '9999px',
-                                                    background: status?.color || 'var(--bg-tertiary)',
-                                                    color: '#374151', // Keep status text dark for contrast on colored badges
-                                                    fontWeight: '500'
+                                                    background: status?.color ? `${status.color}20` : 'var(--bg-tertiary)',
+                                                    color: (status?.label?.toLowerCase().includes('done') || status?.label?.toLowerCase().includes('complete')) ? '#22c55e' : // Green
+                                                        (status?.label?.toLowerCase().includes('progress') || status?.label?.toLowerCase().includes('review')) ? '#eab308' : // Yellow
+                                                            '#ef4444', // Red for To Do/Backlog
+                                                    fontWeight: '600',
+                                                    border: `1px solid ${status?.color}40`
                                                 }}>
                                                     {status?.label}
                                                 </span>
@@ -523,7 +544,7 @@ export default function DepartmentTasksModal({
                                                         {task.assignments && task.assignments.length > 0 ? task.assignments.length : '0'}
                                                     </div>
                                                     {task.due_date && (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: new Date(task.due_date) < new Date() ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
                                                             <Calendar size={12} /> {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                         </div>
                                                     )}
@@ -535,7 +556,7 @@ export default function DepartmentTasksModal({
                                             {task.subtasks_content && calculateProgress(task.subtasks_content) > 0 && (
                                                 <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                     <div style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.3s' }} />
+                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', transition: 'width 0.3s' }} />
                                                     </div>
                                                     <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--accent-color)', minWidth: '35px' }}>
                                                         {calculateProgress(task.subtasks_content)}%
@@ -554,7 +575,16 @@ export default function DepartmentTasksModal({
                 {(showCreateForm || editingTask) && (
                     <div style={{ width: '60%', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', animation: 'slideIn 0.2s ease-out' }}>
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                            <h3 style={{
+                                margin: 0,
+                                fontSize: '1.125rem',
+                                fontWeight: '600',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>
                                 {editingTask ? 'Edit Task' : 'Create New Task'}
                             </h3>
                             <button
@@ -568,7 +598,17 @@ export default function DepartmentTasksModal({
                         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                             <form id="task-form" onSubmit={handleCreateTask}>
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Task Title</label>
+                                    <label style={{
+                                        display: 'block',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '700',
+                                        marginBottom: '0.5rem',
+                                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        width: 'fit-content'
+                                    }}>Task Title</label>
                                     <input
                                         type="text"
                                         value={title}
@@ -589,7 +629,17 @@ export default function DepartmentTasksModal({
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Priority</label>
+                                        <label style={{
+                                            display: 'block',
+                                            fontSize: '0.875rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.5rem',
+                                            background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            backgroundClip: 'text',
+                                            width: 'fit-content'
+                                        }}>Priority</label>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             {['low', 'medium', 'high'].map(p => (
                                                 <button
@@ -614,7 +664,17 @@ export default function DepartmentTasksModal({
                                         </div>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Due Date</label>
+                                        <label style={{
+                                            display: 'block',
+                                            fontSize: '0.875rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.5rem',
+                                            background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            backgroundClip: 'text',
+                                            width: 'fit-content'
+                                        }}>Due Date</label>
                                         <input
                                             type="date"
                                             value={dueDate}
@@ -632,7 +692,17 @@ export default function DepartmentTasksModal({
                                 </div>
 
                                 <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Description</label>
+                                    <label style={{
+                                        display: 'block',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '700',
+                                        marginBottom: '0.5rem',
+                                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        width: 'fit-content'
+                                    }}>Description</label>
                                     <RichTextEditor
                                         value={description}
                                         onChange={setDescription}
@@ -642,7 +712,17 @@ export default function DepartmentTasksModal({
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Assignees</label>
+                                    <label style={{
+                                        display: 'block',
+                                        fontSize: '0.875rem',
+                                        fontWeight: '700',
+                                        marginBottom: '0.5rem',
+                                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        width: 'fit-content'
+                                    }}>Assignees</label>
                                     <div style={{
                                         maxHeight: '200px',
                                         overflowY: 'auto',
@@ -724,7 +804,7 @@ export default function DepartmentTasksModal({
                             <button
                                 type="submit"
                                 form="task-form"
-                                style={{ padding: '0.625rem 1.5rem', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
+                                style={{ padding: '0.625rem 1.5rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
                             >
                                 {editingTask ? 'Save Changes' : 'Create Task'}
                             </button>

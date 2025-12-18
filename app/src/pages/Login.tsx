@@ -57,7 +57,7 @@ export default function Login() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '2.5rem',
-                        boxShadow: '0 10px 25px rgba(236, 72, 153, 0.3)',
+                        boxShadow: 'none',
                     }}>
                         🏢
                     </div>
@@ -182,18 +182,18 @@ export default function Login() {
                             fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
                             transition: 'all 0.3s',
-                            boxShadow: loading ? 'none' : '0 4px 20px rgba(236, 72, 153, 0.4)',
+                            boxShadow: 'none',
                         }}
                         onMouseEnter={(e) => {
                             if (!loading) {
                                 e.currentTarget.style.transform = 'translateY(-2px)'
-                                e.currentTarget.style.boxShadow = '0 8px 25px rgba(236, 72, 153, 0.5)'
+                                e.currentTarget.style.boxShadow = 'none'
                             }
                         }}
                         onMouseLeave={(e) => {
                             if (!loading) {
                                 e.currentTarget.style.transform = 'translateY(0)'
-                                e.currentTarget.style.boxShadow = '0 4px 20px rgba(236, 72, 153, 0.4)'
+                                e.currentTarget.style.boxShadow = 'none'
                             }
                         }}
                     >
@@ -201,29 +201,7 @@ export default function Login() {
                     </button>
                 </form>
 
-                <div style={{
-                    marginTop: '2rem',
-                    textAlign: 'center',
-                    paddingTop: '1.5rem',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                }}>
-                    <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>
-                        Need to create an admin account?{' '}
-                        <a
-                            href="/admin-register"
-                            style={{
-                                color: '#ec4899',
-                                textDecoration: 'none',
-                                fontWeight: '600',
-                                transition: 'color 0.2s',
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#f472b6'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#ec4899'}
-                        >
-                            Register here
-                        </a>
-                    </p>
-                </div>
+                {/* Admin registration link removed */}
             </div>
 
             <style>{`

@@ -113,7 +113,16 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Schedule Meeting"
+            title={
+                <span style={{
+                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 'bold'
+                }}>
+                    Schedule Meeting
+                </span>
+            }
             maxWidth="600px"
         >
             {/* Header removed as it is handled by the Modal component */}
@@ -434,7 +443,7 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated }: Meet
                             padding: '0.5rem 1.5rem',
                             borderRadius: '6px',
                             border: 'none',
-                            background: '#3b82f6',
+                            background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                             color: 'white',
                             fontWeight: '500',
                             cursor: loading ? 'not-allowed' : 'pointer',
@@ -453,10 +462,14 @@ const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: '0.75rem',
     fontWeight: '700',
-    color: 'var(--text-primary)',
     marginBottom: '0.5rem',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em'
+    letterSpacing: '0.05em',
+    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    width: 'fit-content'
 }
 
 const inputStyle: React.CSSProperties = {

@@ -243,9 +243,33 @@ export default function EmployeeProfile() {
                             style={{ display: 'none' }}
                         />
                     </div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                        My Profile
+                    <h2 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: '700',
+                        marginBottom: '0.5rem',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content',
+                        marginLeft: 'auto',
+                        marginRight: 'auto'
+                    }}>
                     </h2>
+                    <p className="text-gradient" style={{
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        marginBottom: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        <User size={32} style={{ color: '#ec4899' }} /> Employee
+                    </p>
                     <p style={{ color: 'var(--text-secondary)' }}>
                         Manage your personal information
                     </p>
@@ -332,7 +356,7 @@ export default function EmployeeProfile() {
                                 style={{
                                     width: '100%', padding: '1rem',
                                     borderRadius: '0.8rem', border: 'none',
-                                    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                                    background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                                     color: 'white', fontWeight: '600', fontSize: '1rem',
                                     cursor: saving ? 'wait' : 'pointer',
                                     display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem',
@@ -352,7 +376,13 @@ export default function EmployeeProfile() {
 }
 
 const labelStyle: React.CSSProperties = {
-    color: 'var(--text-primary)',
+    // Gradient text style
+    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    width: 'fit-content',
+
     fontWeight: '700',
     fontSize: '0.85rem',
     textTransform: 'uppercase',
@@ -360,4 +390,5 @@ const labelStyle: React.CSSProperties = {
     marginBottom: '0.5rem',
     display: 'flex',
     alignItems: 'center'
+
 }

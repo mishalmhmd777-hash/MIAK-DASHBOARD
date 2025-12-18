@@ -44,6 +44,7 @@ interface Task {
         }
     }
     subtasks_content?: string
+    time_logged?: number
 }
 
 
@@ -131,6 +132,23 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
 
             if (error) throw error
 
+            // Fetch Time Logs
+            const { data: logsData } = await supabase
+                .from('subtask_time_logs')
+                .select('task_id, duration_seconds, end_time, start_time')
+                .in('task_id', data.map(t => t.id))
+
+            const timeLogSummary: Record<string, number> = {}
+            if (logsData) {
+                logsData.forEach(log => {
+                    let duration = log.duration_seconds || 0
+                    if (!duration && log.end_time && log.start_time) {
+                        duration = (new Date(log.end_time).getTime() - new Date(log.start_time).getTime()) / 1000
+                    }
+                    timeLogSummary[log.task_id] = (timeLogSummary[log.task_id] || 0) + duration
+                })
+            }
+
             const formattedTasks = data.map((t: any) => {
                 // Merge legacy assignee with new assignments
                 const assigneesMap = new Map()
@@ -150,7 +168,8 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                     assignee: t.assignee, // Legacy Profile object
                     assignees: Array.from(assigneesMap.values()),
                     client_name: t.department?.workspace?.client?.name,
-                    dept_name: t.department?.name
+                    dept_name: t.department?.name,
+                    time_logged: timeLogSummary[t.id] || 0
                 }
             })
 
@@ -195,6 +214,13 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
         const completedTodos = doc.querySelectorAll('li[data-type="taskItem"][data-checked="true"]')
         if (allTodos.length === 0) return 0
         return Math.round((completedTodos.length / allTodos.length) * 100)
+    }
+    const formatDuration = (seconds: number) => {
+        if (!seconds) return '0h 0m 0s'
+        const h = Math.floor(seconds / 3600)
+        const m = Math.floor((seconds % 3600) / 60)
+        const s = Math.floor(seconds % 60)
+        return `${h}h ${m}m ${s}s`
     }
 
     const handleDragEnd = async (result: DropResult) => {
@@ -368,13 +394,18 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                             {task.description ? task.description.replace(/<[^>]*>?/gm, '') : 'No description'}
                                         </div>
                                         {task.subtasks_content && calculateProgress(task.subtasks_content) > 0 && (
-                                            <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '90%' }}>
-                                                <div style={{ flex: 1, height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.3s' }} />
+                                            <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '90%' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${calculateProgress(task.subtasks_content)}%`, height: '100%', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', transition: 'width 0.3s' }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--accent-color)', minWidth: '25px' }}>
+                                                        {calculateProgress(task.subtasks_content)}%
+                                                    </span>
                                                 </div>
-                                                <span style={{ fontSize: '0.65rem', fontWeight: '600', color: 'var(--accent-color)', minWidth: '25px' }}>
-                                                    {calculateProgress(task.subtasks_content)}%
-                                                </span>
+                                                <div style={{ alignSelf: 'flex-end', fontSize: '0.7rem', color: 'var(--accent-color)', fontWeight: '600' }}>
+                                                    {formatDuration(task.time_logged || 0)}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -392,9 +423,10 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                                 <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                     <div style={{
                                                         width: '24px', height: '24px', borderRadius: '50%',
-                                                        background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                                                        background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)'
+                                                        fontSize: '0.75rem', fontWeight: '600', color: 'white',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                                     }}>
                                                         {assignee.full_name?.[0]?.toUpperCase() || <User size={12} />}
                                                     </div>

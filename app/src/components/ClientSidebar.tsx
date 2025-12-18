@@ -1,5 +1,6 @@
-import { LayoutGrid, Plus, Pencil, Trash2, LogOut, Briefcase, Users, Sun, Moon } from 'lucide-react'
-import { useTheme } from '../contexts/ThemeContext'
+import { LayoutGrid, Plus, Pencil, Trash2, LogOut, Briefcase, Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
 
 
 interface Client {
@@ -46,7 +47,36 @@ export default function ClientSidebar({
     onMeetingsClick,
     activeView = 'clients'
 }: ClientSidebarProps) {
-    const { theme, toggleTheme } = useTheme()
+    const [currentTime, setCurrentTime] = useState(new Date())
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
+
+    const getGreeting = () => {
+        const hour = currentTime.getHours()
+        if (hour < 12) return 'Good Morning'
+        if (hour < 18) return 'Good Afternoon'
+        return 'Good Evening'
+    }
+
+    const formatDate = () => {
+        return currentTime.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        })
+    }
+
+    const formatTime = () => {
+        return currentTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    }
 
     return (
         <aside style={{
@@ -79,50 +109,23 @@ export default function ClientSidebar({
                         )}
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>{profile?.full_name}</p>
-                        <button onClick={(e) => { e.stopPropagation(); onSignOut(); }} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginTop: '0.1rem', display: 'flex', alignItems: 'center', gap: '0.25rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger-color)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', fontWeight: '600' }}>
+                            {getGreeting()},
+                        </div>
+                        <p className="text-gradient" style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', overflow: 'visible', whiteSpace: 'normal', lineHeight: '1.2', background: 'linear-gradient(to right, #ec4899, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{profile?.full_name}</p>
+
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', margin: '0.1rem 0 0.25rem' }}>
+                            {formatDate()} • {formatTime()}
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); onSignOut(); }} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: '500' }}>
                             <LogOut size={12} /> Sign Out
                         </button>
                     </div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
-                        style={{
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '8px',
-                            padding: '0.5rem',
-                            cursor: 'pointer',
-                            color: 'var(--text-primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
-                        }}
-                        title="Toggle Theme"
-                    >
-                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                    </button>
+
                 </div>
             </div>
 
-            {/* Logo Area */}
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                    width: 40, height: 40,
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', // Purple to Pink
-                    borderRadius: '10px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white',
-                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
-                }}>
-                    <LayoutGrid size={20} />
-                </div>
-                <div>
-                    <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                        Coordinator
-                    </h1>
-                </div>
-            </div>
+
 
             {/* Main Navigation */}
             <div style={{ padding: '1rem 1rem 0' }}>
@@ -155,7 +158,7 @@ export default function ClientSidebar({
                                 color: activeView === item.id ? 'white' : 'var(--text-secondary)',
                                 transition: 'all 0.2s',
                                 fontWeight: activeView === item.id ? '600' : '400',
-                                boxShadow: activeView === item.id ? '0 4px 12px rgba(236, 72, 153, 0.3)' : 'none'
+                                boxShadow: 'none'
                             }}
                             onMouseEnter={(e) => {
                                 if (activeView !== item.id) {
@@ -232,7 +235,7 @@ export default function ClientSidebar({
                                     color: (activeView === 'clients' && selectedId === client.id) ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.2s',
                                     fontWeight: (activeView === 'clients' && selectedId === client.id) ? '600' : '400',
-                                    boxShadow: (activeView === 'clients' && selectedId === client.id) ? '0 4px 12px rgba(236, 72, 153, 0.3)' : 'none'
+                                    boxShadow: 'none'
                                 }}
                                 onMouseEnter={(e) => {
                                     if (activeView !== 'clients' || selectedId !== client.id) {

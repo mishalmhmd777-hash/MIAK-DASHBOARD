@@ -14,7 +14,9 @@ import {
     Trash2,
     ClipboardList,
     BarChart3,
-    Search
+    Search,
+    Sun,
+    Moon
 } from 'lucide-react'
 import DepartmentTasksModal from '../components/DepartmentTasksModal'
 import DashboardAnalyticsModal from '../components/DashboardAnalyticsModal'
@@ -68,7 +70,7 @@ interface Employee {
 
 export default function CCDashboard() {
     const { user, signOut } = useAuth()
-    const { theme } = useTheme()
+    const { theme, toggleTheme } = useTheme()
     const [profile, setProfile] = useState<Profile | null>(null)
     const [clients, setClients] = useState<Client[]>([])
     const [selectedClient, setSelectedClient] = useState<string | null>(null)
@@ -853,6 +855,24 @@ export default function CCDashboard() {
                                     <NotificationCenter />
 
                                     <button
+                                        onClick={toggleTheme}
+                                        style={{
+                                            padding: '0.75rem',
+                                            borderRadius: '12px',
+                                            border: 'var(--glass-border)',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--text-secondary)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+                                    </button>
+
+                                    <button
                                         onClick={() => setShowAnalytics(true)}
                                         style={{
                                             padding: '0.75rem',
@@ -1072,7 +1092,7 @@ export default function CCDashboard() {
                                                             background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                                                             color: 'white',
                                                             border: 'none',
-                                                            boxShadow: '0 4px 6px rgba(139, 92, 246, 0.2)'
+                                                            boxShadow: 'none'
                                                         }}
                                                     >
                                                         <UserPlus size={18} /> Add Employee
@@ -1111,7 +1131,9 @@ export default function CCDashboard() {
                                                                     <td style={{ padding: '1rem 1.5rem' }}>
                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                                                             <div style={{
-                                                                                width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white',
+                                                                                width: '36px', height: '36px', borderRadius: '50%',
+                                                                                background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+                                                                                color: 'white',
                                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.9rem'
                                                                             }}>
                                                                                 {emp.full_name?.[0]?.toUpperCase() || emp.email[0].toUpperCase()}
@@ -1192,7 +1214,14 @@ export default function CCDashboard() {
                         <Modal
                             isOpen={showAddClient}
                             onClose={() => { setShowAddClient(false); setEditingClient(null); setClientName(''); }}
-                            title={editingClient ? "Edit Client" : "Add New Client"}
+                            title={<h3 style={{
+                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>{editingClient ? "Edit Client" : "Add New Client"}</h3>}
                         >
                             <form onSubmit={handleSaveClient}>
                                 <div style={{ marginBottom: '1.5rem' }}>
@@ -1201,7 +1230,7 @@ export default function CCDashboard() {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                     <button type="button" onClick={() => setShowAddClient(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingClient ? 'Update' : 'Create'}</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingClient ? 'Update' : 'Create'}</button>
                                 </div>
                             </form>
                         </Modal>
@@ -1209,7 +1238,14 @@ export default function CCDashboard() {
                         <Modal
                             isOpen={showAddWorkspace}
                             onClose={() => { setShowAddWorkspace(false); setEditingWorkspace(null); setWorkspaceName(''); }}
-                            title={editingWorkspace ? "Edit Workspace" : "Add New Workspace"}
+                            title={<h3 style={{
+                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>{editingWorkspace ? "Edit Workspace" : "Add New Workspace"}</h3>}
                         >
                             <form onSubmit={handleSaveWorkspace}>
                                 <div style={{ marginBottom: '1.5rem' }}>
@@ -1218,7 +1254,7 @@ export default function CCDashboard() {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                     <button type="button" onClick={() => setShowAddWorkspace(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#0891b2', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingWorkspace ? 'Update' : 'Create'}</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingWorkspace ? 'Update' : 'Create'}</button>
                                 </div>
                             </form>
                         </Modal>
@@ -1226,7 +1262,14 @@ export default function CCDashboard() {
                         <Modal
                             isOpen={showAddDepartment}
                             onClose={() => { setShowAddDepartment(false); setEditingDepartment(null); setDepartmentName(''); }}
-                            title={editingDepartment ? "Edit Department" : "Add New Department"}
+                            title={<h3 style={{
+                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>{editingDepartment ? "Edit Department" : "Add New Department"}</h3>}
                         >
                             <form onSubmit={handleSaveDepartment}>
                                 <div style={{ marginBottom: '1.5rem' }}>
@@ -1235,7 +1278,7 @@ export default function CCDashboard() {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                     <button type="button" onClick={() => setShowAddDepartment(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#ea580c', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingDepartment ? 'Update' : 'Create'}</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingDepartment ? 'Update' : 'Create'}</button>
                                 </div>
                             </form>
                         </Modal>
@@ -1243,7 +1286,14 @@ export default function CCDashboard() {
                         <Modal
                             isOpen={showAddEmployee}
                             onClose={() => { setShowAddEmployee(false); setEditingEmployee(null); setEmpFullName(''); setEmpEmail(''); setEmpPassword(''); }}
-                            title={editingEmployee ? "Edit Employee" : "Add New Employee"}
+                            title={<h3 style={{
+                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                width: 'fit-content'
+                            }}>{editingEmployee ? "Edit Employee" : "Add New Employee"}</h3>}
                         >
                             <form onSubmit={handleAddEmployee}>
                                 <div style={{ marginBottom: '1rem' }}>
@@ -1262,7 +1312,7 @@ export default function CCDashboard() {
                                 )}
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                                     <button type="button" onClick={() => setShowAddEmployee(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: '#059669', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>{editingEmployee ? 'Update' : 'Create'}</button>
+                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingEmployee ? 'Update' : 'Create'}</button>
                                 </div>
                             </form>
                         </Modal>

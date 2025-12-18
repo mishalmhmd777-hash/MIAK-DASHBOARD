@@ -23,7 +23,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
     const { user } = useAuth()
     const [todoItems, setTodoItems] = useState<string[]>([])
     const [selectedSubtask, setSelectedSubtask] = useState<string>('')
-    const [activeTimer, setActiveTimer] = useState<{ subtaskName: string; startTime: Date } | null>(null)
+    const [activeTimer, setActiveTimer] = useState<{ id: string; subtaskName: string; startTime: Date } | null>(null)
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
     const [timeLogs, setTimeLogs] = useState<SubtaskTimeLog[]>([])
     const [loading, setLoading] = useState(false)
@@ -54,6 +54,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
     useEffect(() => {
         if (user && taskId) {
             loadTimeLogs()
+            loadActiveTimer()
         }
     }, [user, taskId])
 
@@ -86,53 +87,98 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
         }
     }
 
+    const loadActiveTimer = async () => {
+        if (!user) return
+
+        try {
+            const { data } = await supabase
+                .from('subtask_time_logs')
+                .select('*')
+                .eq('task_id', taskId)
+                .eq('user_id', user.id)
+                .is('end_time', null)
+                .single()
+
+            if (data) {
+                const startTime = new Date(data.start_time)
+                setActiveTimer({
+                    id: data.id,
+                    subtaskName: data.subtask_name,
+                    startTime: startTime
+                })
+                setSelectedSubtask(data.subtask_name)
+                // Calculate initial elapsed time
+                setElapsedSeconds(Math.floor((new Date().getTime() - startTime.getTime()) / 1000))
+            }
+        } catch (error) {
+            // No active timer found or error (ignore 'PGRST116' which is "The result contains 0 rows")
+            // console.log('No active timer found')
+        }
+    }
+
     const handleStartTimer = async () => {
         if (!selectedSubtask || !user) return
 
-        setActiveTimer({
-            subtaskName: selectedSubtask,
-            startTime: new Date()
-        })
-        setElapsedSeconds(0)
-    }
-
-    const handleStopTimer = async () => {
-        if (!activeTimer || !user) return
-
-        console.log('Stopping timer for user:', user.id)
         setLoading(true)
         try {
-            const endTime = new Date()
-            const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
-
+            const startTime = new Date()
             const payload = {
                 task_id: taskId,
                 user_id: user.id,
-                subtask_name: activeTimer.subtaskName,
-                start_time: activeTimer.startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                duration_seconds: durationSeconds
+                subtask_name: selectedSubtask,
+                start_time: startTime.toISOString(),
+                end_time: null
             }
-
-            console.log('Inserting time log:', payload)
 
             const { data, error } = await supabase
                 .from('subtask_time_logs')
                 .insert(payload)
                 .select()
+                .single()
 
-            if (error) {
-                console.error('Supabase error:', error)
-                throw error
+            if (error) throw error
+
+            if (data) {
+                setActiveTimer({
+                    id: data.id,
+                    subtaskName: selectedSubtask,
+                    startTime: startTime
+                })
+                setElapsedSeconds(0)
             }
+        } catch (error) {
+            console.error('Error starting timer:', error)
+            alert('Failed to start timer.')
+        } finally {
+            setLoading(false)
+        }
+    }
 
-            console.log('Time log saved successfully:', data)
+    const handleStopTimer = async () => {
+        if (!activeTimer || !user) return
+
+        setLoading(true)
+        try {
+            const endTime = new Date()
+            const durationSeconds = Math.floor((endTime.getTime() - activeTimer.startTime.getTime()) / 1000)
+
+            const { error } = await supabase
+                .from('subtask_time_logs')
+                .update({
+                    end_time: endTime.toISOString(),
+                    duration_seconds: durationSeconds
+                })
+                .eq('id', activeTimer.id)
+
+            if (error) throw error
+
             setActiveTimer(null)
             setElapsedSeconds(0)
             loadTimeLogs()
+            loadActiveTimer() // Clean up state
         } catch (error) {
-            console.error('Error saving time log:', error)
-            alert('Failed to save time log. Check console for details.')
+            console.error('Error stopping timer:', error)
+            alert('Failed to stop timer.')
         } finally {
             setLoading(false)
         }

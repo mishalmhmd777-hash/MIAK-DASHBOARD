@@ -106,7 +106,7 @@ export default function Meetings({ clientId }: MeetingsProps) {
                         style={{
                             display: 'flex', alignItems: 'center', gap: '0.5rem',
                             padding: '0.625rem 1rem',
-                            background: '#3b82f6',
+                            background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
                             color: 'white',
                             borderRadius: '8px',
                             fontWeight: '500',
@@ -200,7 +200,7 @@ export default function Meetings({ clientId }: MeetingsProps) {
                                                     onClick={e => e.stopPropagation()}
                                                     style={{
                                                         padding: '0.5rem 1rem',
-                                                        background: '#3b82f6', color: 'white',
+                                                        background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white',
                                                         borderRadius: '6px', fontSize: '0.875rem', fontWeight: '500',
                                                         textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem'
                                                     }}

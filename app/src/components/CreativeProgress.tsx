@@ -578,7 +578,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                     background: filterTimeRange === 'weekly' ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'transparent',
                                     color: filterTimeRange === 'weekly' ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.3s ease',
-                                    boxShadow: filterTimeRange === 'weekly' ? '0 2px 8px rgba(236, 72, 153, 0.3)' : 'none'
+                                    boxShadow: 'none'
                                 }}
                             >
                                 Weekly
@@ -595,7 +595,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                     background: filterTimeRange === 'monthly' ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'transparent',
                                     color: filterTimeRange === 'monthly' ? 'white' : 'var(--text-secondary)',
                                     transition: 'all 0.3s ease',
-                                    boxShadow: filterTimeRange === 'monthly' ? '0 2px 8px rgba(236, 72, 153, 0.3)' : 'none'
+                                    boxShadow: 'none'
                                 }}
                             >
                                 Monthly
@@ -614,7 +614,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                 fontSize: '0.875rem',
                                 border: 'none',
                                 cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
+                                boxShadow: 'none'
                             }}>
                             <Plus size={16} /> New
                         </button>
@@ -818,7 +818,7 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                             {task.assignees && task.assignees.length > 0 ? (
                                                 task.assignees.map((assignee: any) => (
                                                     <div key={assignee.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', boxShadow: '0 2px 4px rgba(236, 72, 153, 0.3)' }}>
+                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', boxShadow: 'none' }}>
                                                             {(assignee.full_name || assignee.email || 'U')[0].toUpperCase()}
                                                         </div>
                                                         <span style={{ fontSize: '0.875rem' }}>{assignee.full_name || assignee.email}</span>
@@ -1076,9 +1076,9 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: '600' }}>{format(currentDate, 'MMMM yyyy')}</h2>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer' }}><ChevronLeft size={16} /></button>
-                                <button onClick={() => setCurrentDate(new Date())} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }}>Today</button>
-                                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer' }}><ChevronRight size={16} /></button>
+                                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer', color: 'var(--text-primary)' }}><ChevronLeft size={16} /></button>
+                                <button onClick={() => setCurrentDate(new Date())} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)' }}>Today</button>
+                                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', cursor: 'pointer', color: 'var(--text-primary)' }}><ChevronRight size={16} /></button>
                             </div>
                         </div>
 

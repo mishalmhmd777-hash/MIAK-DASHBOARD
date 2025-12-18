@@ -55,7 +55,16 @@ const TaskCard = React.memo(({ task, index }: TaskCardProps) => {
                         marginBottom: '0.75rem'
                     }}
                 >
-                    <div style={{ fontWeight: '500', fontSize: '0.875rem', lineHeight: '1.3', color: 'var(--text-primary)' }}>{task.title}</div>
+                    <div style={{
+                        fontWeight: '700',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.3',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content'
+                    }}>{task.title}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         {task.department?.workspace?.client?.name} • {task.department?.name}
                     </div>

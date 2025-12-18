@@ -23,6 +23,13 @@ export default function EmployeeDashboard() {
     const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+    const [userName, setUserName] = useState<string>('')
+    const [currentTime, setCurrentTime] = useState(new Date())
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     useEffect(() => {
         if (user) {
@@ -34,15 +41,16 @@ export default function EmployeeDashboard() {
         try {
             const { data } = await supabase
                 .from('profiles')
-                .select('avatar_url')
+                .select('avatar_url, full_name')
                 .eq('id', user?.id)
                 .single()
 
-            if (data && data.avatar_url) {
-                setAvatarUrl(data.avatar_url)
+            if (data) {
+                if (data.avatar_url) setAvatarUrl(data.avatar_url)
+                if (data.full_name) setUserName(data.full_name)
             }
         } catch (error) {
-            console.error('Error fetching avatar:', error)
+            console.error('Error fetching profile:', error)
         }
     }
 
@@ -306,7 +314,7 @@ export default function EmployeeDashboard() {
     const glassButtonStyle = (active: boolean) => ({
         padding: '0.6rem 1.2rem',
         borderRadius: 'var(--radius-md)',
-        background: active ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--bg-tertiary)',
+        background: active ? 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)' : 'var(--bg-tertiary)',
         color: active ? 'white' : 'var(--text-secondary)',
         border: active ? 'none' : 'var(--glass-border)',
         backdropFilter: 'blur(4px)',
@@ -336,7 +344,18 @@ export default function EmployeeDashboard() {
                 zIndex: 40,
                 marginBottom: '2rem'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                    onClick={() => setViewMode('profile')}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
                     <div style={{
                         width: 48,
                         height: 48,
@@ -353,34 +372,24 @@ export default function EmployeeDashboard() {
                         {!avatarUrl && 'WD'}
                     </div>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '800' }} className="text-gradient">My Dashboard</h1>
-                        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                            Welcome back, <span style={{ fontWeight: '600' }} className="text-gradient">{user?.email}</span>
-                        </p>
+                        <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: '800', lineHeight: '1.2', letterSpacing: '-0.5px' }}>
+                            Welcome back, <span className="text-gradient" style={{ background: 'linear-gradient(to right, #ec4899, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{userName || user?.email}</span>
+                        </h1>
+                        <div style={{
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            marginTop: '0.25rem',
+                            background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            width: 'fit-content'
+                        }}>
+                            {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} • {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button
-                        onClick={() => setViewMode('profile')}
-                        style={{
-                            padding: '0.75rem',
-                            borderRadius: '12px',
-                            border: 'var(--glass-border)',
-                            background: viewMode === 'profile' ? 'var(--accent-color)' : 'var(--bg-tertiary)',
-                            color: viewMode === 'profile' ? 'white' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            boxShadow: 'none'
-                        }}
-                        title="My Profile"
-                    >
-                        <User size={20} />
-                    </button>
-
                     <NotificationCenter />
 
                     <button
@@ -597,7 +606,11 @@ export default function EmployeeDashboard() {
                                                 letterSpacing: '0.03em',
                                                 border: `1px solid ${status?.color}40`
                                             }}>
-                                                <span className="text-gradient">{status?.label?.toUpperCase() || 'UNKNOWN'}</span>
+                                                <span style={{
+                                                    color: (status?.label?.toLowerCase().includes('done') || status?.label?.toLowerCase().includes('complete')) ? '#22c55e' : // Green
+                                                        (status?.label?.toLowerCase().includes('progress') || status?.label?.toLowerCase().includes('review')) ? '#eab308' : // Yellow
+                                                            '#ef4444' // Red for To Do/Backlog
+                                                }}>{status?.label?.toUpperCase() || 'UNKNOWN'}</span>
                                             </span>
                                         </div>
                                         <p style={{ margin: 0, fontSize: '0.95rem', maxWidth: '800px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} className="text-gradient">
@@ -608,12 +621,17 @@ export default function EmployeeDashboard() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '500' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <Flag size={16} />
-                                            <span style={{ textTransform: 'capitalize' }} className="text-gradient">{task.priority || 'Medium'}</span>
+                                            <span style={{
+                                                textTransform: 'capitalize',
+                                                color: (task.priority === 'high' ? '#f87171' : // Red
+                                                    task.priority === 'medium' ? '#facc15' : // Yellow
+                                                        '#4ade80') // Green
+                                            }}>{task.priority || 'Medium'}</span>
                                         </div>
                                         {task.due_date && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: new Date(task.due_date) < new Date() ? '#ef4444' : 'var(--text-secondary)' }}>
                                                 <Calendar size={16} />
-                                                <span className="text-gradient">{new Date(task.due_date).toLocaleDateString()}</span>
+                                                <span>{new Date(task.due_date).toLocaleDateString()}</span>
                                             </div>
                                         )}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -624,9 +642,9 @@ export default function EmployeeDashboard() {
                                 </div>
                             )
                         })}
-                    </div>
+                    </div >
                 )}
-            </main>
+            </main >
 
             <TaskDetailsModal
                 isOpen={isTaskModalOpen}
@@ -644,6 +662,6 @@ export default function EmployeeDashboard() {
                 tasks={tasks}
                 statuses={statuses}
             />
-        </div>
+        </div >
     )
 }

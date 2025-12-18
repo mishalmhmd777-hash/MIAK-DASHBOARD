@@ -163,10 +163,24 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
     return (
         <div style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)', marginBottom: '1rem' }}>
-                <MessageSquare size={20} />
-                <h3 style={{ fontSize: '1rem', fontWeight: '700', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MessageSquare size={20} style={{ color: '#ec4899' }} />
+                <h3 style={{
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    margin: 0,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    width: 'fit-content'
+                }}>
                     Comments
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: '500', WebkitTextFillColor: 'initial' }}>
                         ({comments.length})
                     </span>
                 </h3>
