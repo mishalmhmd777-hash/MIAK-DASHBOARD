@@ -125,6 +125,42 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated, meetin
 
                     if (partError) console.error('Error updating participants:', partError)
                 }
+
+                // --- Send Notifications ---
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    const formattedDate = new Date(startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+                    const notificationTitle = meetingToEdit ? `Meeting Updated: ${title}` : `New Meeting: ${title}`
+                    const notificationMessage = `Meeting successfully scheduled for ${formattedDate}.`
+
+                    const notificationsToInsert = []
+
+                    // 1. Notification for Creator (Self)
+                    notificationsToInsert.push({
+                        user_id: user.id,
+                        title: notificationTitle,
+                        message: `You scheduled "${title}" for ${formattedDate}.`,
+                        type: 'success'
+                    })
+
+                    // 2. Notification for Participants
+                    participants.forEach(participantId => {
+                        notificationsToInsert.push({
+                            user_id: participantId,
+                            title: notificationTitle,
+                            message: `You have been invited to "${title}" on ${formattedDate}.`,
+                            type: 'info'
+                        })
+                    })
+
+                    if (notificationsToInsert.length > 0) {
+                        const { error: notifError } = await supabase
+                            .from('notifications')
+                            .insert(notificationsToInsert)
+
+                        if (notifError) console.error('Error creating notifications:', notifError)
+                    }
+                }
             }
 
             onMeetingCreated()

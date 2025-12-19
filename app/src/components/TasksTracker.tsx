@@ -462,7 +462,7 @@ export default function TasksTracker({ clientId }: TasksTrackerProps) {
                                     </div>
 
                                     {/* Due Date */}
-                                    <div style={{ fontSize: '0.875rem', color: task.due_date && new Date(task.due_date) < new Date() ? 'var(--danger-color)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <div style={{ fontSize: '0.875rem', color: (task.status?.label?.toLowerCase().includes('done') || task.status?.label?.toLowerCase().includes('complete')) ? '#4ade80' : (task.due_date && new Date(task.due_date) < new Date() ? 'var(--danger-color)' : 'var(--text-secondary)'), display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                         {task.due_date ? (
                                             <>
                                                 <Calendar size={14} />

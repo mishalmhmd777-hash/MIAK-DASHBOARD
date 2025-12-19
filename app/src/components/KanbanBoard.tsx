@@ -1,7 +1,7 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import { Pencil, Trash2, Plus, GripVertical, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Task {
     id: string
@@ -119,6 +119,42 @@ export default function KanbanBoard({
         }
     }
 
+    const [isMounted, setIsMounted] = useState(false)
+
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
+    if (!isMounted) {
+        return (
+            <div style={{ display: 'flex', gap: '2rem', overflowX: 'auto', paddingBottom: '1.5rem', height: '100%', paddingLeft: '0.5rem', paddingRight: '0.5rem' }}>
+                {displayStatuses.map((status) => (
+                    <div
+                        key={groupByLabel && status.id !== 'unassigned' ? status.label : status.id}
+                        style={{
+                            flex: '1 0 300px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: '1rem',
+                            padding: '1.25rem',
+                            height: '100%',
+                            maxHeight: '100%',
+                            border: '1px solid var(--border-color)'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0 0.5rem' }}>
+                            <GripVertical size={16} color="#9ca3af" />
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: status.color || '#e5e7eb' }} />
+                            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{status.label}</h3>
+                        </div>
+                        <div style={{ flex: 1 }}></div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
     return (
         <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="board" direction="horizontal" type="COLUMN">
@@ -186,8 +222,7 @@ export default function KanbanBoard({
                                                             flex: 1,
                                                             display: 'flex',
                                                             flexDirection: 'column',
-                                                            gap: '1rem',
-                                                            background: snapshot.isDraggingOver ? '#f3f4f6' : 'transparent',
+                                                            background: snapshot.isDraggingOver ? 'var(--bg-tertiary)' : 'transparent',
                                                             transition: 'background 0.2s',
                                                             borderRadius: '0.5rem',
                                                             padding: '0.25rem',
@@ -206,6 +241,7 @@ export default function KanbanBoard({
                                                                         style={{
                                                                             background: 'var(--bg-primary)',
                                                                             padding: '1rem',
+                                                                            marginBottom: '1rem',
                                                                             borderRadius: '0.5rem',
                                                                             border: '1px solid var(--border-color)',
                                                                             boxShadow: snapshot.isDragging ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',

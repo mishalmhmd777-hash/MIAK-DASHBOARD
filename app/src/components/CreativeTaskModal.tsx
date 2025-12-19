@@ -160,7 +160,7 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
             // Fetch Profiles
             const { data: profs, error: profError } = await supabase
                 .from('profiles')
-                .select('id, full_name, email')
+                .select('id, full_name, email, status')
                 .eq('role', 'employee')
                 .order('full_name', { ascending: true })
 
@@ -565,10 +565,10 @@ export default function CreativeTaskModal({ isOpen, onClose, onTaskCreated, task
                                             </div>
                                         </div>
 
-                                        {profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                                        {profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase()) && p.status !== 'inactive').length === 0 ? (
                                             <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>No profiles found</div>
                                         ) : (
-                                            profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase())).map(p => {
+                                            profiles.filter(p => (p.full_name || p.email).toLowerCase().includes(searchTerm.toLowerCase()) && p.status !== 'inactive').map(p => {
                                                 const isSelected = assigneeIds.includes(p.id)
                                                 return (
                                                     <div

@@ -2,6 +2,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import Modal from '../components/Modal'
 import {
     Users,
@@ -16,7 +17,9 @@ import {
     BarChart3,
     Search,
     Sun,
-    Moon
+    Moon,
+    Eye,
+    EyeOff
 } from 'lucide-react'
 import DepartmentTasksModal from '../components/DepartmentTasksModal'
 import DashboardAnalyticsModal from '../components/DashboardAnalyticsModal'
@@ -28,6 +31,8 @@ import CCProfile from '../components/CCProfile'
 import CreativeProgress from '../components/CreativeProgress'
 import TasksTracker from '../components/TasksTracker'
 import Meetings from '../components/Meetings'
+import EmployeeGallery from '../components/EmployeeGallery'
+import EmployeeTasksModal from '../components/EmployeeTasksModal'
 
 
 interface Profile {
@@ -61,6 +66,8 @@ interface Employee {
     created_at: string
     status?: 'active' | 'inactive'
     created_by?: string
+    avatar_url?: string
+    task_count?: number
 }
 
 export default function CCDashboard() {
@@ -73,13 +80,15 @@ export default function CCDashboard() {
     const [departments, setDepartments] = useState<Department[]>([])
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'dashboard' | 'profile' | 'creative-progress' | 'tasks-tracker' | 'meetings'>('dashboard')
+    const [viewMode, setViewMode] = useState<'dashboard' | 'profile' | 'creative-progress' | 'tasks-tracker' | 'meetings' | 'employees'>('dashboard')
 
     // Form states
     const [showAddClient, setShowAddClient] = useState(false)
 
     const [showAddDepartment, setShowAddDepartment] = useState(false)
     const [showAddEmployee, setShowAddEmployee] = useState(false)
+    const [showEmployeeTasks, setShowEmployeeTasks] = useState(false)
+    const [selectedEmployeeForTasks, setSelectedEmployeeForTasks] = useState<{ id: string, name: string } | null>(null)
 
     const [clientName, setClientName] = useState('')
 
@@ -87,6 +96,8 @@ export default function CCDashboard() {
     const [empFullName, setEmpFullName] = useState('')
     const [empEmail, setEmpEmail] = useState('')
     const [empPassword, setEmpPassword] = useState('')
+
+    const [showPassword, setShowPassword] = useState(false) // State for password visibility
     const [error, setError] = useState<string | null>(null)
 
     // Department-Employee Assignment states
@@ -109,7 +120,6 @@ export default function CCDashboard() {
         }
     }
     const [searchTerm, setSearchTerm] = useState('')
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
     // Event Listener for Command Palette Navigation
     useEffect(() => {
@@ -374,11 +384,18 @@ export default function CCDashboard() {
     const loadEmployees = async () => {
         const { data } = await supabase
             .from('profiles')
-            .select('*')
+            .select('*, task_assignments(count)')
             .eq('role', 'employee')
             .eq('created_by', user?.id)
             .order('created_at', { ascending: false })
-        setEmployees(data || [])
+
+        // Map the count from the nested object to a flat property
+        const employeesWithCount = data?.map((emp: any) => ({
+            ...emp,
+            task_count: emp.task_assignments?.[0]?.count || 0
+        }))
+
+        setEmployees(employeesWithCount || [])
     }
 
     const logActivity = async (actionType: string, description: string, entityId?: string) => {
@@ -565,15 +582,30 @@ export default function CCDashboard() {
             logActivity('update_employee', `updated employee: ${empFullName}`)
             createNotification('Employee Updated', `Successfully updated employee: ${empFullName}`, 'success')
         } else {
+
             // Create new employee
-            const { data, error: signUpError } = await supabase.auth.signUp({
+            // Use time-limited isolated client to prevent session hijacking
+            const tempSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                }
+            )
+
+            const { data, error: signUpError } = await tempSupabase.auth.signUp({
                 email: empEmail,
                 password: empPassword,
                 options: {
                     data: {
                         full_name: empFullName,
                         role: 'employee',
-                        status: 'active'
+                        status: 'active',
+                        created_by: user?.id // Pass creator ID for the trigger
                     },
                 },
             })
@@ -584,6 +616,7 @@ export default function CCDashboard() {
             }
 
             if (data.user) {
+                // Use MAIN client to update metadata, as the temp client is not logged in as admin/cc
                 await supabase
                     .from('profiles')
                     .update({ created_by: user?.id, status: 'active' })
@@ -602,19 +635,27 @@ export default function CCDashboard() {
     }
 
     const handleDeleteEmployee = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this employee?')) return
+        if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return
 
-        const { error } = await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', id)
+        try {
+            const { error, count } = await supabase
+                .from('profiles')
+                .delete({ count: 'exact' })
+                .eq('id', id)
 
-        if (error) {
-            alert('Error deleting employee: ' + error.message)
-        } else {
-            logActivity('delete_employee', 'deleted an employee')
-            createNotification('Employee Deleted', 'Successfully deleted employee', 'success')
-            loadEmployees()
+            if (error) {
+                console.error('Delete error:', error)
+                alert('Error deleting employee: ' + error.message)
+            } else if (count === 0) {
+                alert('Could not delete employee. You may not have permission, or they may have related records preventing deletion.')
+            } else {
+                logActivity('delete_employee', 'deleted an employee')
+                createNotification('Employee Deleted', 'Successfully deleted employee', 'success')
+                loadEmployees()
+            }
+        } catch (err) {
+            console.error('Unexpected error:', err)
+            alert('An unexpected error occurred while deleting.')
         }
     }
 
@@ -739,12 +780,7 @@ export default function CCDashboard() {
         dept.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const filteredEmployees = employees.filter(emp => {
-        const matchesSearch = (emp.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            emp.email.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesStatus = statusFilter === 'all' || emp.status === statusFilter
-        return matchesSearch && matchesStatus
-    })
+
 
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme === 'dark' ? 'var(--bg-primary)' : 'var(--bg-gradient)', color: 'var(--text-primary)', transition: 'background-color 0.3s' }}>
@@ -774,6 +810,10 @@ export default function CCDashboard() {
                     setViewMode('meetings')
                     setSelectedClient(null)
                 }}
+                onEmployeesClick={() => {
+                    setViewMode('employees')
+                    setSelectedClient(null)
+                }}
                 activeView={viewMode === 'dashboard' ? 'clients' : viewMode}
             />
 
@@ -793,6 +833,26 @@ export default function CCDashboard() {
                 ) : viewMode === 'meetings' ? (
                     <div style={{ overflowY: 'auto', height: '100%' }}>
                         <Meetings clientId={selectedClient} />
+                    </div>
+                ) : viewMode === 'employees' ? (
+                    <div style={{ overflowY: 'auto', height: '100%' }}>
+                        <EmployeeGallery
+                            employees={employees}
+                            onAdd={() => setShowAddEmployee(true)}
+                            onEdit={(emp) => {
+                                setEditingEmployee(emp)
+                                setEmpFullName(emp.full_name)
+                                setEmpEmail(emp.email)
+                                setEmpPassword('')
+                                setShowAddEmployee(true)
+                            }}
+                            onDelete={handleDeleteEmployee}
+                            onStatusChange={handleStatusChange}
+                            onTaskClick={(id, name) => {
+                                setSelectedEmployeeForTasks({ id, name })
+                                setShowEmployeeTasks(true)
+                            }}
+                        />
                     </div>
                 ) : (
                     <>
@@ -977,138 +1037,8 @@ export default function CCDashboard() {
                                             </div>
                                         )}
 
-                                        {/* Employees Table Moved Here */}
-                                        <div style={{ ...glassCardStyle, overflow: 'hidden' }}>
-                                            <div style={{
-                                                padding: '1.5rem',
-                                                borderBottom: 'var(--glass-border)',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                background: 'var(--bg-primary)',
-                                            }}>
-                                                <div>
-                                                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.25rem' }} className="text-gradient">
-                                                        Employees
-                                                    </h2>
-                                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
-                                                        Manage your team members
-                                                    </p>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                                    <select
-                                                        value={statusFilter}
-                                                        onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-                                                        style={{
-                                                            padding: '0.5rem 1rem',
-                                                            borderRadius: '0.5rem',
-                                                            border: 'var(--glass-border)',
-                                                            fontSize: '0.875rem',
-                                                            color: 'var(--text-primary)',
-                                                            outline: 'none',
-                                                            cursor: 'pointer',
-                                                            background: 'var(--bg-secondary)',
-                                                        }}
-                                                    >
-                                                        <option value="all">All Status</option>
-                                                        <option value="active">Active</option>
-                                                        <option value="inactive">Inactive</option>
-                                                    </select>
-                                                    <button
-                                                        onClick={() => setShowAddEmployee(true)}
-                                                        style={{
-                                                            ...glassActionButtonStyle,
-                                                            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            boxShadow: 'none'
-                                                        }}
-                                                    >
-                                                        <UserPlus size={18} /> Add Employee
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ padding: '0', overflowX: 'auto' }}>
-                                                {filteredEmployees.length === 0 ? (
-                                                    <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                                                        <div style={{
-                                                            width: '64px', height: '64px', background: 'var(--bg-tertiary)', borderRadius: '50%',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
-                                                            color: 'var(--text-secondary)'
-                                                        }}>
-                                                            <UserPlus size={32} />
-                                                        </div>
-                                                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No employees yet</h3>
-                                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                                                            Start by adding employees to your organization.
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                        <thead style={{ background: 'var(--bg-tertiary)' }}>
-                                                            <tr>
-                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</th>
-                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</th>
-                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                                                                <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Actions</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {filteredEmployees.map((emp) => (
-                                                                <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                                            <div style={{
-                                                                                width: '36px', height: '36px', borderRadius: '50%',
-                                                                                background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
-                                                                                color: 'white',
-                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '0.9rem'
-                                                                            }}>
-                                                                                {emp.full_name?.[0]?.toUpperCase() || emp.email[0].toUpperCase()}
-                                                                            </div>
-                                                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{emp.full_name || 'N/A'}</span>
-                                                                        </div>
-                                                                    </td>
-                                                                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{emp.email}</td>
-                                                                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                                                                        <select
-                                                                            value={emp.status || 'active'}
-                                                                            onChange={(e) => handleStatusChange(emp.id, e.target.value as 'active' | 'inactive')}
-                                                                            style={{
-                                                                                padding: '0.25rem 0.75rem',
-                                                                                borderRadius: '2rem',
-                                                                                fontSize: '0.75rem',
-                                                                                fontWeight: '600',
-                                                                                border: 'none',
-                                                                                background: emp.status === 'inactive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                                                                color: emp.status === 'inactive' ? '#ef4444' : '#059669',
-                                                                                cursor: 'pointer',
-                                                                                outline: 'none',
-                                                                            }}
-                                                                        >
-                                                                            <option value="active">Active</option>
-                                                                            <option value="inactive">Inactive</option>
-                                                                        </select>
-                                                                    </td>
-                                                                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                                                            <button onClick={() => { setEditingEmployee(emp); setEmpFullName(emp.full_name); setEmpEmail(emp.email); setEmpPassword(''); setShowAddEmployee(true); }} style={{ padding: '0.4rem', borderRadius: '0.4rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s' }}>
-                                                                                <Pencil size={16} />
-                                                                            </button>
-                                                                            <button onClick={() => handleDeleteEmployee(emp.id)} style={{ padding: '0.4rem', borderRadius: '0.4rem', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger-color)', transition: 'all 0.2s' }}>
-                                                                                <Trash2 size={16} />
-                                                                            </button>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                )}
-                                            </div>
-                                        </div>
                                     </div>
+
 
                                     {/* Right Column: Activity Feed */}
                                     <div style={{ height: 'calc(100vh - 140px)', position: 'sticky', top: '0' }}>
@@ -1123,132 +1053,181 @@ export default function CCDashboard() {
                                 </div>
                             </div>
                         </main>
-
-                        {/* Error Message Toast/Banner */}
-                        {error && (
-                            <div style={{
-                                position: 'fixed', bottom: '2rem', right: '2rem',
-                                background: '#fef2f2', color: '#b91c1c', border: '1px solid #fca5a5',
-                                padding: '1rem', borderRadius: '0.5rem', zIndex: 100,
-                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                            }}>
-                                <strong>Error:</strong> {error}
-                                <button onClick={() => setError(null)} style={{ marginLeft: '1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
-                            </div>
-                        )}
-
-                        {/* Modals outside main flex flow to prevent clipping if any issues, though they are fixed position usually */}
-
-                        {/* Modals are fixed position so they can be anywhere, but keep them at root of flex container or here */}
-                        <Modal
-                            isOpen={showAddClient}
-                            onClose={() => { setShowAddClient(false); setEditingClient(null); setClientName(''); }}
-                            title={<h3 style={{
-                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
-                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                width: 'fit-content'
-                            }}>{editingClient ? "Edit Client" : "Add New Client"}</h3>}
-                        >
-                            <form onSubmit={handleSaveClient}>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Client Name</label>
-                                    <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Acme Corp" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                    <button type="button" onClick={() => setShowAddClient(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingClient ? 'Update' : 'Create'}</button>
-                                </div>
-                            </form>
-                        </Modal>
-
-
-
-                        <Modal
-                            isOpen={showAddDepartment}
-                            onClose={() => { setShowAddDepartment(false); setEditingDepartment(null); setDepartmentName(''); }}
-                            title={<h3 style={{
-                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
-                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                width: 'fit-content'
-                            }}>{editingDepartment ? "Edit Department" : "Add New Department"}</h3>}
-                        >
-                            <form onSubmit={handleSaveDepartment}>
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Department Name</label>
-                                    <input type="text" value={departmentName} onChange={(e) => setDepartmentName(e.target.value)} placeholder="e.g. Design" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                    <button type="button" onClick={() => setShowAddDepartment(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingDepartment ? 'Update' : 'Create'}</button>
-                                </div>
-                            </form>
-                        </Modal>
-
-                        <Modal
-                            isOpen={showAddEmployee}
-                            onClose={() => { setShowAddEmployee(false); setEditingEmployee(null); setEmpFullName(''); setEmpEmail(''); setEmpPassword(''); }}
-                            title={<h3 style={{
-                                margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
-                                background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                width: 'fit-content'
-                            }}>{editingEmployee ? "Edit Employee" : "Add New Employee"}</h3>}
-                        >
-                            <form onSubmit={handleAddEmployee}>
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Full Name</label>
-                                    <input type="text" value={empFullName} onChange={(e) => setEmpFullName(e.target.value)} placeholder="e.g. John Doe" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                </div>
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Email</label>
-                                    <input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} placeholder="john@example.com" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                </div>
-                                {!editingEmployee && (
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Password</label>
-                                        <input type="password" value={empPassword} onChange={(e) => setEmpPassword(e.target.value)} placeholder="Min 6 chars" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                    <button type="button" onClick={() => setShowAddEmployee(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingEmployee ? 'Update' : 'Create'}</button>
-                                </div>
-                            </form>
-                        </Modal>
-
-                        <DepartmentTasksModal
-                            isOpen={showDepartmentTasks}
-                            onClose={() => setShowDepartmentTasks(false)}
-                            departmentId={selectedDepartment}
-                            departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
-                            employees={selectedDepartment ? (departmentEmployees[selectedDepartment] || []) : []}
-                        />
-
-                        <EmployeeAssignmentModal
-                            isOpen={showAssignEmployees}
-                            onClose={() => setShowAssignEmployees(false)}
-                            departmentId={selectedDepartment || ''}
-                            departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
-                            allEmployees={employees}
-                            assignedEmployeeIds={assignedEmployeeIds}
-                            onToggleAssignment={handleToggleEmployeeAssignment}
-                        />
-
-                        <DashboardAnalyticsModal
-                            isOpen={showAnalytics}
-                            onClose={() => setShowAnalytics(false)}
-                            ccId={user?.id}
-                        />
                     </>
                 )}
+
+                {/* Error Message Toast/Banner */}
+                {error && (
+                    <div style={{
+                        position: 'fixed', bottom: '2rem', right: '2rem',
+                        background: '#fef2f2', color: '#b91c1c', border: '1px solid #fca5a5',
+                        padding: '1rem', borderRadius: '0.5rem', zIndex: 100,
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}>
+                        <strong>Error:</strong> {error}
+                        <button onClick={() => setError(null)} style={{ marginLeft: '1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
+                    </div>
+                )}
+
+                {/* Modals outside main flex flow to prevent clipping if any issues, though they are fixed position usually */}
+
+                {/* Modals are fixed position so they can be anywhere, but keep them at root of flex container or here */}
+                <Modal
+                    isOpen={showAddClient}
+                    onClose={() => { setShowAddClient(false); setEditingClient(null); setClientName(''); }}
+                    title={<h3 style={{
+                        margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content'
+                    }}>{editingClient ? "Edit Client" : "Add New Client"}</h3>}
+                >
+                    <form onSubmit={handleSaveClient}>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Client Name</label>
+                            <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Acme Corp" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button type="button" onClick={() => setShowAddClient(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                            <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingClient ? 'Update' : 'Create'}</button>
+                        </div>
+                    </form>
+                </Modal>
+
+
+
+                <Modal
+                    isOpen={showAddDepartment}
+                    onClose={() => { setShowAddDepartment(false); setEditingDepartment(null); setDepartmentName(''); }}
+                    title={<h3 style={{
+                        margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content'
+                    }}>{editingDepartment ? "Edit Department" : "Add New Department"}</h3>}
+                >
+                    <form onSubmit={handleSaveDepartment}>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Department Name</label>
+                            <input type="text" value={departmentName} onChange={(e) => setDepartmentName(e.target.value)} placeholder="e.g. Design" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button type="button" onClick={() => setShowAddDepartment(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                            <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingDepartment ? 'Update' : 'Create'}</button>
+                        </div>
+                    </form>
+                </Modal>
+
+                <Modal
+                    isOpen={showAddEmployee}
+                    onClose={() => { setShowAddEmployee(false); setEditingEmployee(null); setEmpFullName(''); setEmpEmail(''); setEmpPassword(''); }}
+                    title={<h3 style={{
+                        margin: 0, fontSize: '1.25rem', fontWeight: 'bold',
+                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        width: 'fit-content'
+                    }}>{editingEmployee ? "Edit Employee" : "Add New Employee"}</h3>}
+                >
+                    <form onSubmit={handleAddEmployee}>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Full Name</label>
+                            <input type="text" value={empFullName} onChange={(e) => setEmpFullName(e.target.value)} placeholder="e.g. John Doe" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Email</label>
+                            <input type="email" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} placeholder="john@example.com" required style={{ width: '100%', padding: '0.75rem', border: 'var(--glass-border)', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                        </div>
+                        {!editingEmployee && (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontWeight: '500', fontSize: '0.875rem' }}>Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={empPassword}
+                                        onChange={(e) => setEmpPassword(e.target.value)}
+                                        placeholder="Min 6 chars"
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            paddingRight: '2.5rem', // Make room for the eye icon
+                                            border: 'var(--glass-border)',
+                                            borderRadius: '0.5rem',
+                                            fontSize: '0.95rem',
+                                            outline: 'none',
+                                            background: 'var(--bg-primary)',
+                                            color: 'var(--text-primary)'
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '0.75rem',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: 'var(--text-secondary)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: 0
+                                        }}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button type="button" onClick={() => setShowAddEmployee(false)} style={{ padding: '0.625rem 1rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'var(--glass-border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                            <button type="submit" style={{ padding: '0.625rem 1rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '500' }}>{editingEmployee ? 'Update' : 'Create'}</button>
+                        </div>
+                    </form>
+                </Modal>
+
+                <DepartmentTasksModal
+                    isOpen={showDepartmentTasks}
+                    onClose={() => setShowDepartmentTasks(false)}
+                    departmentId={selectedDepartment}
+                    departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
+                    employees={selectedDepartment ? (departmentEmployees[selectedDepartment] || []) : []}
+                />
+
+                <EmployeeAssignmentModal
+                    isOpen={showAssignEmployees}
+                    onClose={() => setShowAssignEmployees(false)}
+                    departmentId={selectedDepartment || ''}
+                    departmentName={departments.find(d => d.id === selectedDepartment)?.name || ''}
+                    allEmployees={employees}
+                    assignedEmployeeIds={assignedEmployeeIds}
+                    onToggleAssignment={handleToggleEmployeeAssignment}
+                />
+
+                <EmployeeTasksModal
+                    isOpen={showEmployeeTasks}
+                    onClose={() => {
+                        setShowEmployeeTasks(false)
+                        setSelectedEmployeeForTasks(null)
+                    }}
+                    employeeId={selectedEmployeeForTasks?.id || null}
+                    employeeName={selectedEmployeeForTasks?.name || ''}
+                />
+
+                <DashboardAnalyticsModal
+                    isOpen={showAnalytics}
+                    onClose={() => setShowAnalytics(false)}
+                    ccId={user?.id}
+                />
             </div>
         </div >
     )

@@ -29,7 +29,8 @@ interface ClientSidebarProps {
     onCreativeProgressClick?: () => void
     onTasksTrackerClick?: () => void
     onMeetingsClick?: () => void
-    activeView?: 'clients' | 'creative-progress' | 'tasks-tracker' | 'meetings' | 'profile'
+    onEmployeesClick?: () => void
+    activeView?: 'clients' | 'creative-progress' | 'tasks-tracker' | 'meetings' | 'employees' | 'profile'
 }
 
 export default function ClientSidebar({
@@ -45,6 +46,7 @@ export default function ClientSidebar({
     onCreativeProgressClick,
     onTasksTrackerClick,
     onMeetingsClick,
+    onEmployeesClick,
     activeView = 'clients'
 }: ClientSidebarProps) {
     const [currentTime, setCurrentTime] = useState(new Date())
@@ -125,8 +127,6 @@ export default function ClientSidebar({
                 </div>
             </div>
 
-
-
             {/* Main Navigation */}
             <div style={{ padding: '1rem 1rem 0' }}>
                 <h2 style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
@@ -137,6 +137,7 @@ export default function ClientSidebar({
                         { id: 'creative-progress', label: 'Content Calendar', icon: LayoutGrid },
                         { id: 'tasks-tracker', label: 'Tasks Tracker', icon: Briefcase },
                         { id: 'meetings', label: 'Meetings', icon: Users },
+                        { id: 'employees', label: 'Employees', icon: Users },
                     ].map(item => (
                         <div
                             key={item.id}
@@ -144,6 +145,7 @@ export default function ClientSidebar({
                                 if (item.id === 'creative-progress') onCreativeProgressClick?.()
                                 if (item.id === 'tasks-tracker') onTasksTrackerClick?.()
                                 if (item.id === 'meetings') onMeetingsClick?.()
+                                if (item.id === 'employees') onEmployeesClick?.()
                             }}
                             style={{
                                 padding: '0.75rem 0.75rem',
@@ -179,7 +181,6 @@ export default function ClientSidebar({
                     ))}
                 </div>
             </div>
-
 
             {/* Clients List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>

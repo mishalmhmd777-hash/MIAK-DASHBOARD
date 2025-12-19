@@ -17,21 +17,28 @@ interface SubtaskTimeLog {
 interface SubtaskTimerProps {
     taskId: string
     subtasksContent: string
+    onUpdateSubtasks: (newContent: string) => void
+    onEdit: () => void
 }
 
-export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerProps) {
+interface SubtaskItem {
+    text: string
+    checked: boolean
+}
+
+export default function SubtaskTimer({ taskId, subtasksContent, onUpdateSubtasks, onEdit }: SubtaskTimerProps) {
     const { user } = useAuth()
-    const [todoItems, setTodoItems] = useState<string[]>([])
-    const [selectedSubtask, setSelectedSubtask] = useState<string>('')
+    const [subtasks, setSubtasks] = useState<SubtaskItem[]>([])
     const [activeTimer, setActiveTimer] = useState<{ id: string; subtaskName: string; startTime: Date } | null>(null)
     const [elapsedSeconds, setElapsedSeconds] = useState(0)
     const [timeLogs, setTimeLogs] = useState<SubtaskTimeLog[]>([])
     const [loading, setLoading] = useState(false)
+    const [newTaskText, setNewTaskText] = useState('')
 
-    // Extract to-do items from rich text content
+    // Extract subtasks from rich text content
     useEffect(() => {
         if (!subtasksContent) {
-            setTodoItems([])
+            setSubtasks([])
             return
         }
 
@@ -39,15 +46,13 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
         const doc = parser.parseFromString(subtasksContent, 'text/html')
         const todos = doc.querySelectorAll('li[data-type="taskItem"]')
         const items = Array.from(todos)
-            .map(todo => todo.textContent?.trim() || '')
-            .filter(item => item.length > 0)
+            .map(todo => ({
+                text: todo.textContent?.trim() || '',
+                checked: todo.getAttribute('data-checked') === 'true'
+            }))
+            .filter(item => item.text.length > 0)
 
-        setTodoItems(items)
-
-        // Reset selected subtask if it's no longer in the list
-        if (selectedSubtask && !items.includes(selectedSubtask)) {
-            setSelectedSubtask('')
-        }
+        setSubtasks(items)
     }, [subtasksContent])
 
     // Load time logs
@@ -72,7 +77,6 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
 
     const loadTimeLogs = async () => {
         if (!user) return
-
         try {
             const { data, error } = await supabase
                 .from('subtask_time_logs')
@@ -89,7 +93,6 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
 
     const loadActiveTimer = async () => {
         if (!user) return
-
         try {
             const { data } = await supabase
                 .from('subtask_time_logs')
@@ -106,18 +109,15 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
                     subtaskName: data.subtask_name,
                     startTime: startTime
                 })
-                setSelectedSubtask(data.subtask_name)
-                // Calculate initial elapsed time
                 setElapsedSeconds(Math.floor((new Date().getTime() - startTime.getTime()) / 1000))
             }
         } catch (error) {
-            // No active timer found or error (ignore 'PGRST116' which is "The result contains 0 rows")
-            // console.log('No active timer found')
+            // No active timer
         }
     }
 
-    const handleStartTimer = async () => {
-        if (!selectedSubtask || !user) return
+    const handleStartTimer = async (subtaskName: string) => {
+        if (!user || activeTimer) return
 
         setLoading(true)
         try {
@@ -125,7 +125,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
             const payload = {
                 task_id: taskId,
                 user_id: user.id,
-                subtask_name: selectedSubtask,
+                subtask_name: subtaskName,
                 start_time: startTime.toISOString(),
                 end_time: null
             }
@@ -141,7 +141,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
             if (data) {
                 setActiveTimer({
                     id: data.id,
-                    subtaskName: selectedSubtask,
+                    subtaskName: subtaskName,
                     startTime: startTime
                 })
                 setElapsedSeconds(0)
@@ -175,7 +175,7 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
             setActiveTimer(null)
             setElapsedSeconds(0)
             loadTimeLogs()
-            loadActiveTimer() // Clean up state
+            loadActiveTimer()
         } catch (error) {
             console.error('Error stopping timer:', error)
             alert('Failed to stop timer.')
@@ -197,153 +197,239 @@ export default function SubtaskTimer({ taskId, subtasksContent }: SubtaskTimerPr
             .reduce((total, log) => total + (log.duration_seconds || 0), 0)
     }
 
-    if (todoItems.length === 0) {
+    const handleToggleSubtask = (index: number) => {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(subtasksContent, 'text/html')
+        const todos = doc.querySelectorAll('li[data-type="taskItem"]')
+        const item = todos[index]
+        if (item) {
+            const isChecked = item.getAttribute('data-checked') === 'true'
+            item.setAttribute('data-checked', String(!isChecked))
+            onUpdateSubtasks(doc.body.innerHTML)
+        }
+    }
+
+    const handleAddSubtask = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newTaskText.trim()) return
+
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(subtasksContent || '<ul data-type="taskList"></ul>', 'text/html')
+
+        let list = doc.querySelector('ul[data-type="taskList"]')
+        if (!list) {
+            list = doc.createElement('ul')
+            list.setAttribute('data-type', 'taskList')
+            doc.body.appendChild(list)
+        }
+
+        const li = doc.createElement('li')
+        li.setAttribute('data-type', 'taskItem')
+        li.setAttribute('data-checked', 'false')
+
+        const label = doc.createElement('label')
+        const input = doc.createElement('input')
+        input.type = 'checkbox'
+        label.appendChild(input)
+
+        const div = doc.createElement('div')
+        div.textContent = newTaskText.trim()
+
+        li.appendChild(label)
+        li.appendChild(div)
+        list.appendChild(li)
+
+        onUpdateSubtasks(doc.body.innerHTML)
+        setNewTaskText('')
+    }
+
+    if (subtasks.length === 0) {
         return (
-            <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    Add subtasks above to start tracking time
-                </p>
+            <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)' }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>No subtasks yet.</p>
+                <button
+                    onClick={onEdit}
+                    style={{
+                        background: 'var(--accent-color)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Add Subtasks
+                </button>
             </div>
         )
     }
 
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={20} />
-                Subtask Timer
-            </h3>
-
-            {/* Timer Controls */}
-            <div style={{ padding: '1rem', background: 'var(--bg-tertiary)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <select
-                        value={selectedSubtask}
-                        onChange={(e) => setSelectedSubtask(e.target.value)}
-                        disabled={!!activeTimer}
-                        style={{
-                            flex: 1,
-                            padding: '0.5rem',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem',
-                            outline: 'none',
-                            cursor: activeTimer ? 'not-allowed' : 'pointer',
-                            opacity: activeTimer ? 0.6 : 1,
-                            background: 'var(--bg-primary)',
-                            color: 'var(--text-primary)'
-                        }}
-                    >
-                        <option value="">Select a subtask...</option>
-                        {todoItems.map((item, index) => (
-                            <option key={index} value={item}>{item}</option>
-                        ))}
-                    </select>
-
-                    {!activeTimer ? (
-                        <button
-                            onClick={handleStartTimer}
-                            disabled={!selectedSubtask || loading}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: selectedSubtask ? 'var(--success-color)' : 'var(--bg-secondary)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                cursor: selectedSubtask ? 'pointer' : 'not-allowed',
-                                fontWeight: '500',
-                                fontSize: '0.875rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            <Play size={16} fill="currentColor" />
-                            Start
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleStopTimer}
-                            disabled={loading}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: 'var(--danger-color)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.375rem',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '0.875rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            <Square size={16} fill="currentColor" />
-                            Stop
-                        </button>
-                    )}
-                </div>
-
-                {activeTimer && (
-                    <div style={{
-                        padding: '0.75rem',
-                        background: 'var(--bg-primary)',
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                    <Clock size={20} />
+                    Subtasks & Timer
+                </h3>
+                <button
+                    onClick={onEdit}
+                    style={{
+                        background: 'transparent',
+                        color: 'var(--accent-color)',
+                        border: '1px solid var(--accent-color)',
+                        padding: '0.25rem 0.75rem',
                         borderRadius: '0.375rem',
-                        border: '2px solid var(--success-color)',
-                        textAlign: 'center'
-                    }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                            Tracking: {activeTimer.subtaskName}
-                        </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--success-color)', fontFamily: 'monospace' }}>
-                            {formatTime(elapsedSeconds)}
-                        </div>
-                    </div>
-                )}
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Edit List
+                </button>
             </div>
 
-            {/* Time Log Summary */}
-            {timeLogs.length > 0 && (
-                <div>
-                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                        Time Summary
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {Array.from(new Set(timeLogs.map(log => log.subtask_name))).map(subtaskName => {
-                            const totalSeconds = getTotalTimeForSubtask(subtaskName)
-                            const logCount = timeLogs.filter(log => log.subtask_name === subtaskName).length
+            {/* List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {subtasks.map((task, index) => {
+                    const isActive = activeTimer?.subtaskName === task.text
+                    const totalTime = getTotalTimeForSubtask(task.text)
 
-                            return (
+                    return (
+                        <div key={index} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: isActive ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-tertiary)',
+                            border: isActive ? '1px solid var(--success-color)' : '1px solid var(--border-color)',
+                            borderRadius: '0.5rem',
+                            padding: '0.75rem',
+                            gap: '1rem'
+                        }}>
+                            {/* Checkbox & Text */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                                 <div
-                                    key={subtaskName}
+                                    onClick={() => handleToggleSubtask(index)}
                                     style={{
-                                        padding: '0.75rem',
-                                        background: 'var(--bg-primary)',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '0.375rem',
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '4px',
+                                        border: task.checked ? 'none' : '2px solid var(--text-secondary)',
+                                        background: task.checked ? 'var(--success-color)' : 'transparent',
                                         display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        flexShrink: 0
                                     }}
                                 >
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-primary)' }}>
-                                            {subtaskName}
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                            {logCount} session{logCount !== 1 ? 's' : ''}
-                                        </div>
-                                    </div>
-                                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--accent-color)', fontFamily: 'monospace' }}>
-                                        {formatTime(totalSeconds)}
-                                    </div>
+                                    {task.checked && <Square size={12} fill="white" color="white" />}
                                 </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
+                                <span style={{
+                                    textDecoration: task.checked ? 'line-through' : 'none',
+                                    color: task.checked ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                    fontWeight: '500',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    {task.text}
+                                </span>
+                            </div>
+
+                            {/* Controls */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                {/* Time Display */}
+                                <div style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '600',
+                                    color: isActive ? 'var(--success-color)' : 'var(--text-secondary)'
+                                }}>
+                                    {isActive ? formatTime(elapsedSeconds) : formatTime(totalTime)}
+                                </div>
+
+                                {/* Timer Button */}
+                                {isActive ? (
+                                    <button
+                                        onClick={handleStopTimer}
+                                        disabled={loading}
+                                        style={{
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            color: 'var(--danger-color)',
+                                            border: '1px solid var(--danger-color)',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer'
+                                        }}
+                                        title="Stop Timer"
+                                    >
+                                        <Square size={12} fill="currentColor" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleStartTimer(task.text)}
+                                        disabled={loading || (activeTimer !== null) || task.checked}
+                                        style={{
+                                            background: 'rgba(34, 197, 94, 0.1)',
+                                            color: 'var(--success-color)',
+                                            border: '1px solid var(--success-color)',
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: (loading || activeTimer || task.checked) ? 'not-allowed' : 'pointer',
+                                            opacity: (loading || activeTimer || task.checked) ? 0.5 : 1
+                                        }}
+                                        title={task.checked ? "Cannot time completed task" : "Start Timer"}
+                                    >
+                                        <Play size={12} fill="currentColor" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Quick Add */}
+            <form onSubmit={handleAddSubtask} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <input
+                    type="text"
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    placeholder="Add a new subtask..."
+                    style={{
+                        flex: 1,
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.375rem',
+                        padding: '0.5rem 0.75rem',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.9rem',
+                        outline: 'none'
+                    }}
+                />
+                <button
+                    type="submit"
+                    disabled={!newTaskText.trim()}
+                    style={{
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.375rem',
+                        padding: '0.5rem 1rem',
+                        cursor: newTaskText.trim() ? 'pointer' : 'not-allowed',
+                        fontWeight: '500'
+                    }}
+                >
+                    Add
+                </button>
+            </form>
         </div>
     )
 }

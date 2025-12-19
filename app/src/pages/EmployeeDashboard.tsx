@@ -531,7 +531,7 @@ export default function EmployeeDashboard() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>You have no pending tasks assigned to you.</p>
                     </div>
                 ) : viewMode === 'board' ? (
-                    <div style={{ ...glassCardStyle, height: '700px', overflow: 'hidden' }}>
+                    <div style={{ ...glassCardStyle, backdropFilter: 'none', WebkitBackdropFilter: 'none', height: '700px', overflow: 'hidden' }}>
                         <KanbanBoard
                             tasks={tasks}
                             statuses={statuses}

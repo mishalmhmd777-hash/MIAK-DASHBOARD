@@ -147,9 +147,9 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                     due_date,
                     priority,
                     status:task_statuses(id, label, color),
-                    assignee:profiles!tasks_assigned_to_fkey(id, full_name, email, avatar_url),
+                    assignee:profiles!tasks_assigned_to_fkey(id, full_name, email, avatar_url, status),
                     assignments:task_assignments(
-                        user:profiles(id, full_name, email, avatar_url)
+                        user:profiles(id, full_name, email, avatar_url, status)
                     ),
                     department:departments!inner(
                         workspace:workspaces!inner(
@@ -532,7 +532,15 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                             />
                         </div>
                         <button
-                            onClick={() => { setSearchTerm(''); setActiveTab('Overview'); setFilterTimeRange('all'); }}
+                            onClick={() => {
+                                setSearchTerm('');
+                                setActiveTab('Overview');
+                                setFilterTimeRange('all');
+                                setAssigneeFilter('');
+                                setContentTypeFilter('');
+                                setDateRangeStart('');
+                                setDateRangeEnd('');
+                            }}
                             style={{
                                 padding: '0.5rem 1rem',
                                 background: 'transparent',
@@ -567,7 +575,11 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
 
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
-                                onClick={() => setFilterTimeRange(filterTimeRange === 'weekly' ? 'all' : 'weekly')}
+                                onClick={() => {
+                                    setFilterTimeRange(filterTimeRange === 'weekly' ? 'all' : 'weekly');
+                                    setDateRangeStart('');
+                                    setDateRangeEnd('');
+                                }}
                                 style={{
                                     padding: '0.5rem 1rem',
                                     borderRadius: '6px',
@@ -584,7 +596,11 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                 Weekly
                             </button>
                             <button
-                                onClick={() => setFilterTimeRange(filterTimeRange === 'monthly' ? 'all' : 'monthly')}
+                                onClick={() => {
+                                    setFilterTimeRange(filterTimeRange === 'monthly' ? 'all' : 'monthly');
+                                    setDateRangeStart('');
+                                    setDateRangeEnd('');
+                                }}
                                 style={{
                                     padding: '0.5rem 1rem',
                                     borderRadius: '6px',
@@ -640,8 +656,9 @@ export default function CreativeProgress({ clientId }: CreativeProgressProps) {
                                 }}
                             >
                                 <option value="">All Assignees</option>
-                                {Array.from(new Set(tasks.flatMap(t => t.assignees?.map(a => JSON.stringify({ id: a.id, name: a.full_name || a.email })) || [])))
+                                {Array.from(new Set(tasks.flatMap(t => t.assignees?.map(a => JSON.stringify({ id: a.id, name: a.full_name || a.email, status: (a as any).status })) || [])))
                                     .map(str => JSON.parse(str))
+                                    .filter((assignee: any) => assignee.status !== 'inactive')
                                     .map((assignee: any) => (
                                         <option key={assignee.id} value={assignee.id}>{assignee.name}</option>
                                     ))

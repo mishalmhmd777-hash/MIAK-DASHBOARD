@@ -21,6 +21,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
     const [title, setTitle] = useState('')
     const [statuses, setStatuses] = useState<any[]>([])
     const [progress, setProgress] = useState(0)
+    const [isEditingSubtasks, setIsEditingSubtasks] = useState(false)
 
     // Load statuses
     useEffect(() => {
@@ -264,23 +265,34 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                     <hr style={{ border: 'none', borderBottom: '1px solid #e5e7eb', margin: '2rem 0' }} />
 
                     {/* Subtasks Section */}
+                    {/* Subtasks Section */}
                     <div style={{ marginBottom: '3rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)' }}>
-                                <CheckSquare size={20} style={{ color: '#ec4899' }} />
-                                <h3 style={{
-                                    fontSize: '1rem',
-                                    fontWeight: '700',
-                                    margin: 0,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em',
-                                    background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text',
-                                    width: 'fit-content'
-                                }}>Subtasks</h3>
-                            </div>
+                            {/* Header moved inside SubtaskTimer for unified look, or kept here if needed. 
+                                Since SubtaskTimer now has a header, we can hide this one or sync them.
+                                Let's keep the Progress bar here but remove the 'Subtasks' text header if we are in View mode,
+                                because SubtaskTimer has its own header.
+                            */}
+                            {isEditingSubtasks && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)' }}>
+                                    <CheckSquare size={20} style={{ color: '#ec4899' }} />
+                                    <h3 style={{
+                                        fontSize: '1rem',
+                                        fontWeight: '700',
+                                        margin: 0,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        background: 'linear-gradient(to right, #ec4899, #8b5cf6)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text',
+                                        width: 'fit-content'
+                                    }}>Edit Subtasks</h3>
+                                </div>
+                            )}
+
+                            {!isEditingSubtasks && <div />} {/* Spacer if header is hidden */}
+
                             {progress > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <div style={{ width: '100px', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -290,20 +302,40 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onUpdate }: Ta
                                 </div>
                             )}
                         </div>
-                        <div className="notion-editor-wrapper">
-                            <RichTextEditor
-                                value={subtasksContent}
-                                onChange={handleUpdateSubtasks}
-                                placeholder="Add subtasks using '/' → To-do List"
-                                style={{ minHeight: '150px' }}
+
+                        {isEditingSubtasks ? (
+                            <div className="notion-editor-wrapper">
+                                <RichTextEditor
+                                    value={subtasksContent}
+                                    onChange={handleUpdateSubtasks}
+                                    placeholder="Add subtasks using '/' → To-do List"
+                                    style={{ minHeight: '150px', marginBottom: '1rem' }}
+                                />
+                                <button
+                                    onClick={() => setIsEditingSubtasks(false)}
+                                    style={{
+                                        background: 'var(--success-color)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '0.375rem',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    Done Editing
+                                </button>
+                            </div>
+                        ) : (
+                            <SubtaskTimer
+                                taskId={task.id}
+                                subtasksContent={subtasksContent}
+                                onUpdateSubtasks={handleUpdateSubtasks}
+                                onEdit={() => setIsEditingSubtasks(true)}
                             />
-                        </div>
+                        )}
                     </div>
-
-                    <hr style={{ border: 'none', borderBottom: '1px solid #e5e7eb', margin: '2rem 0' }} />
-
-                    {/* Subtask Timer */}
-                    <SubtaskTimer taskId={task.id} subtasksContent={subtasksContent} />
 
                 </div>
             </div>
