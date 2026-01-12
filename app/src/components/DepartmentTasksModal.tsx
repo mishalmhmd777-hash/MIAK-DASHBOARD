@@ -261,6 +261,25 @@ export default function DepartmentTasksModal({
         setShowCreateForm(true)
     }
 
+    const handleUpdateSubtasks = async (newContent: string) => {
+        if (!editingTask) return
+
+        // Optimistic update
+        setEditingTask(prev => prev ? { ...prev, subtasks_content: newContent } : null)
+        setTasks(prev => prev.map(t =>
+            t.id === editingTask.id ? { ...t, subtasks_content: newContent } : t
+        ))
+
+        const { error } = await supabase
+            .from('tasks')
+            .update({ subtasks_content: newContent })
+            .eq('id', editingTask.id)
+
+        if (error) {
+            console.error('Error updating subtasks:', error)
+        }
+    }
+
     const handleDeleteTask = async (taskId: string) => {
         if (!confirm('Are you sure you want to delete this task?')) return
 
@@ -785,6 +804,8 @@ export default function DepartmentTasksModal({
                                         <SubtaskTimer
                                             taskId={editingTask.id}
                                             subtasksContent={editingTask.subtasks_content || ''}
+                                            onUpdateSubtasks={handleUpdateSubtasks}
+                                            onEdit={() => { }}
                                         />
                                     </div>
                                 )}

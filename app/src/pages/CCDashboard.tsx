@@ -622,7 +622,6 @@ export default function CCDashboard() {
                     .update({ created_by: user?.id, status: 'active' })
                     .eq('id', data.user.id)
                 logActivity('create_employee', `added a new employee: ${empFullName}`)
-                createNotification('Employee Created', `Successfully created employee: ${empFullName}`, 'success')
             }
         }
 
@@ -669,7 +668,6 @@ export default function CCDashboard() {
             alert('Error updating status: ' + error.message)
         } else {
             logActivity('update_status', `updated employee status to ${newStatus}`)
-            createNotification('Status Updated', `Updated employee status to ${newStatus}`, 'info')
             loadEmployees()
         }
     }

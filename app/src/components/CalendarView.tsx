@@ -12,7 +12,7 @@ import {
     subMonths,
     isToday
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Task {
     id: string

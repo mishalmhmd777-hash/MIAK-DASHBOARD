@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
 
 interface Task {
@@ -15,7 +15,7 @@ interface TaskStatus {
 }
 
 interface NotificationDropdownProps {
-    tasks: any[]
+    tasks: Task[]
     statuses: TaskStatus[]
     onTaskClick: (task: any) => void
     onClose: () => void

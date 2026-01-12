@@ -131,8 +131,6 @@ export default function MeetingModal({ isOpen, onClose, onMeetingCreated, meetin
                 if (user) {
                     const formattedDate = new Date(startTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
                     const notificationTitle = meetingToEdit ? `Meeting Updated: ${title}` : `New Meeting: ${title}`
-                    const notificationMessage = `Meeting successfully scheduled for ${formattedDate}.`
-
                     const notificationsToInsert = []
 
                     // 1. Notification for Creator (Self)
